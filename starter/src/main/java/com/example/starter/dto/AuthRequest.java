@@ -1,4 +1,4 @@
-package <%= packageName %>.dto;
+package com.example.starter.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,10 +9,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class AuthResponse {
-    private String token;
+public class AuthRequest {
     private String email;
-    private String firstName;
-    private String lastName;
-    private String role;
+    private String password;
 }

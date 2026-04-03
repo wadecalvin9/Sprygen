@@ -10,13 +10,9 @@ export class ProjectGenerator {
   private templatesDir: string;
 
   constructor() {
-    // Resolve templates in all execution environments:
-    //   ts-node:       __dirname = src/generator  → ../../templates/project
-    //   tsup bundle:   __dirname = dist           → ../templates/project
-    //   global install:__dirname = dist           → ../templates/project (bundled)
     const candidates = [
-      path.resolve(__dirname, '../../templates/project'),  // ts-node
-      path.resolve(__dirname, '../templates/project'),     // tsup single bundle / global
+      path.resolve(__dirname, '../../templates/project'),
+      path.resolve(__dirname, '../templates/project'),
     ];
     const found = candidates.find(p => fs.existsSync(p));
     if (!found) {
@@ -27,79 +23,95 @@ export class ProjectGenerator {
     this.templatesDir = found;
   }
 
-
   async generate(options: ProjectOptions): Promise<void> {
     const outputDir = path.resolve(process.cwd(), options.projectName);
 
-    // Check if output directory already exists
     if (await fs.pathExists(outputDir)) {
-      throw new Error(`Directory "${options.projectName}" already exists. Please choose a different project name or remove the existing directory.`);
+      throw new Error(
+        `Directory "${options.projectName}" already exists. Please choose a different project name or remove the existing directory.`
+      );
     }
 
+    const artifactId = options.projectName.toLowerCase().replace(/[^a-z0-9-]/g, '-');
+    const groupId    = options.packageName.split('.').slice(0, -1).join('.') || options.packageName;
+
     logger.title(`Generating Spring Boot project: ${options.projectName}`);
-    const spinner = ora({ text: 'Downloading from Spring Initializr...', color: 'cyan' }).start();
+
+    const spinner = ora({ text: 'Downloading from Spring Initializr…', color: 'cyan' }).start();
 
     try {
-      const artifactId = options.projectName.toLowerCase().replace(/[^a-z0-9-]/g, '-');
-      const groupId = options.packageName.split('.').slice(0, -1).join('.') || options.packageName;
-      
-      const type = options.buildTool === 'maven' ? 'maven-project' : 'gradle-project';
-      let dependencies = 'web,data-jpa,security,validation,lombok';
-      
-      if (options.database === 'mysql') dependencies += ',mysql';
-      if (options.database === 'postgresql') dependencies += ',postgresql';
-      if (options.database === 'h2') dependencies += ',h2';
-      
-      if (options.modules.includes('Mail')) dependencies += ',mail';
+      // ── Step 1: Download from Spring Initializr ──────────────
+      let dependencies = 'data-jpa,security,validation,lombok';
+      dependencies += ',web';                      // always include web
 
-      const url = new URL('https://start.spring.io/starter.zip');
-      url.searchParams.append('type', type);
-      url.searchParams.append('language', 'java');
-      url.searchParams.append('baseDir', options.projectName);
-      url.searchParams.append('groupId', groupId);
-      url.searchParams.append('artifactId', artifactId);
-      url.searchParams.append('name', options.projectName);
+      if (options.database === 'mysql')      dependencies += ',mysql';
+      if (options.database === 'postgresql') dependencies += ',postgresql';
+      if (options.database === 'h2')         dependencies += ',h2';
+      if (options.modules.includes('Mail'))  dependencies += ',mail';
+
+      // Thymeleaf only added for session + fullstack
+      const needsThymeleaf =
+        options.authStrategy === 'session' && options.projectType === 'fullstack';
+      if (needsThymeleaf) dependencies += ',thymeleaf';
+
+      const type = options.buildTool === 'maven' ? 'maven-project' : 'gradle-project';
+      const url  = new URL('https://start.spring.io/starter.zip');
+      url.searchParams.append('type',        type);
+      url.searchParams.append('language',    'java');
+      url.searchParams.append('baseDir',     options.projectName);
+      url.searchParams.append('groupId',     groupId);
+      url.searchParams.append('artifactId',  artifactId);
+      url.searchParams.append('name',        options.projectName);
       url.searchParams.append('description', options.description);
       url.searchParams.append('packageName', options.packageName);
-      url.searchParams.append('packaging', 'jar');
+      url.searchParams.append('packaging',   'jar');
       url.searchParams.append('javaVersion', options.javaVersion);
       url.searchParams.append('dependencies', dependencies);
 
       const response = await axios({
-        url: url.toString(),
-        method: 'GET',
+        url:          url.toString(),
+        method:       'GET',
         responseType: 'arraybuffer',
       });
 
-      spinner.text = 'Extracting project scaffold...';
+      spinner.text = 'Extracting project scaffold…';
       const tmpZipPath = path.resolve(process.cwd(), `${options.projectName}-tmp.zip`);
       await fs.writeFile(tmpZipPath, response.data);
-
       const zip = new AdmZip(tmpZipPath);
       zip.extractAllTo(process.cwd(), true);
       await fs.unlink(tmpZipPath);
 
-      spinner.text = 'Patching dependencies and writing custom templates...';
-      
-      await this.patchDependencies(outputDir, options);
-      
+      // ── Step 2: Patch pom.xml / build.gradle ─────────────────
+      spinner.text = 'Patching dependencies…';
+      await this.patchDependencies(outputDir, options, needsThymeleaf);
+
+      // ── Step 3: Build template context ───────────────────────
+      spinner.text = 'Writing source files…';
       const context = this.buildContext(options, outputDir, artifactId, groupId);
-      
-      const javaSourceBase = path.join(outputDir, 'src/main/java', options.packagePath);
+
+      const javaBase      = path.join(outputDir, 'src/main/java', options.packagePath);
       const resourcesBase = path.join(outputDir, 'src/main/resources');
 
-      await fs.ensureDir(javaSourceBase);
+      await fs.ensureDir(javaBase);
       await fs.ensureDir(resourcesBase);
 
-      // Clean up properties and write our own yaml
-      if (await fs.pathExists(path.join(resourcesBase, 'application.properties'))) {
-        await fs.unlink(path.join(resourcesBase, 'application.properties'));
-      }
-      
-      await this.generateJavaSources(javaSourceBase, context, options.modules.includes('Swagger'));
+      // Clean up Spring Initializr's properties file
+      const propsFile = path.join(resourcesBase, 'application.properties');
+      if (await fs.pathExists(propsFile)) await fs.unlink(propsFile);
+
+      // ── Step 4: Generate Java sources ────────────────────────
+      await this.generateJavaSources(javaBase, context, options);
+
+      // ── Step 5: Generate resources ────────────────────────────
       await this.generateResources(resourcesBase, context, options);
 
-      spinner.succeed(`Project "${options.projectName}" scaffolded via Spring Initializr successfully!`);
+      // ── Step 6: Generate frontend ────────────────────────────
+      if (options.projectType === 'fullstack') {
+        spinner.text = 'Writing frontend files…';
+        await this.generateFrontend(outputDir, context, options, needsThymeleaf);
+      }
+
+      spinner.succeed(`Project "${options.projectName}" scaffolded successfully!`);
     } catch (err) {
       spinner.fail('Project generation failed.');
       throw err;
@@ -108,14 +120,19 @@ export class ProjectGenerator {
     this.printSuccessMessage(options);
   }
 
-  private async patchDependencies(outputDir: string, options: ProjectOptions) {
+  private async patchDependencies(
+    outputDir: string,
+    options: ProjectOptions,
+    needsThymeleaf: boolean,
+  ) {
     const hasSwagger = options.modules.includes('Swagger');
-    
+
     if (options.buildTool === 'maven') {
-      const pomPath = path.join(outputDir, 'pom.xml');
-      let pomContent = await fs.readFile(pomPath, 'utf8');
-      
-      const jwtdeps = `
+      const pomPath    = path.join(outputDir, 'pom.xml');
+      let pomContent   = await fs.readFile(pomPath, 'utf8');
+
+      // JWT deps (only for JWT auth strategy)
+      const jwtDeps = options.authStrategy === 'jwt' ? `
         <!-- JWT Dependencies -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
@@ -133,139 +150,156 @@ export class ProjectGenerator {
             <artifactId>jjwt-jackson</artifactId>
             <version>0.11.5</version>
             <scope>runtime</scope>
-        </dependency>`;
-        
+        </dependency>` : '';
+
       const swaggerDep = hasSwagger ? `
-        <!-- Swagger Dependency -->
+        <!-- Swagger/OpenAPI -->
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
             <version>2.3.0</version>
         </dependency>` : '';
-        
-      pomContent = pomContent.replace('</dependencies>', `${jwtdeps}${swaggerDep}\n    </dependencies>`);
+
+      // Thymeleaf Spring Security extras (role checks in templates)
+      const thymeleafSecDep = needsThymeleaf ? `
+        <!-- Thymeleaf Spring Security Extras -->
+        <dependency>
+            <groupId>org.thymeleaf.extras</groupId>
+            <artifactId>thymeleaf-extras-springsecurity6</artifactId>
+        </dependency>` : '';
+
+      pomContent = pomContent.replace(
+        '</dependencies>',
+        `${jwtDeps}${swaggerDep}${thymeleafSecDep}\n    </dependencies>`
+      );
       await fs.writeFile(pomPath, pomContent, 'utf8');
-      
+
     } else {
       const gradlePath = path.join(outputDir, 'build.gradle');
-      const swaggerDepStr = hasSwagger ? `\n    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0'` : '';
-      
-      const appendStr = `\n
-dependencies {
+      const swaggerStr = hasSwagger
+        ? `\n    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0'`
+        : '';
+      const thymeleafStr = needsThymeleaf
+        ? `\n    implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6'`
+        : '';
+      const jwtStr = options.authStrategy === 'jwt' ? `
     implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
-    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
-    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'${swaggerDepStr}
-}\n`;
+    runtimeOnly    'io.jsonwebtoken:jjwt-impl:0.11.5'
+    runtimeOnly    'io.jsonwebtoken:jjwt-jackson:0.11.5'` : '';
+
+      const appendStr = `\ndependencies {${jwtStr}${swaggerStr}${thymeleafStr}\n}\n`;
       await fs.appendFile(gradlePath, appendStr, 'utf8');
     }
   }
 
-  private buildContext(options: ProjectOptions, outputDir: string, artifactId: string, groupId: string) {
-    const mainClassName = this.toPascalCase(options.projectName.replace(/[^a-zA-Z0-9]/g, '')) + 'Application';
+  private buildContext(
+    options: ProjectOptions,
+    outputDir: string,
+    artifactId: string,
+    groupId: string,
+  ) {
+    const mainClassName  = this.toPascalCase(
+      options.projectName.replace(/[^a-zA-Z0-9]/g, '')
+    ) + 'Application';
     const dbDependencies = this.getDbDependencies(options.database);
-    const dbConfig = this.getDbConfig(options.database, artifactId);
+    const dbConfig       = this.getDbConfig(options.database, artifactId);
 
     return {
-      projectName: options.projectName,
+      projectName:       options.projectName,
       projectNamePascal: mainClassName.replace('Application', ''),
       artifactId,
       groupId,
-      packageName: options.packageName,
-      packagePath: options.packagePath,
-      database: options.database,
-      buildTool: options.buildTool,
+      packageName:       options.packageName,
+      packagePath:       options.packagePath,
+      database:          options.database,
+      buildTool:         options.buildTool,
       mainClassName,
-      javaVersion: options.javaVersion,
+      javaVersion:       options.javaVersion,
       springBootVersion: options.springBootVersion,
-      description: options.description,
-      hasSwagger: options.modules.includes('Swagger'),
-      hasMail: options.modules.includes('Mail'),
-      hasLogging: options.modules.includes('Logging'),
-      dbDependency: dbDependencies.dependency,
-      dbDriverClass: dbDependencies.driverClass,
+      description:       options.description,
+      hasSwagger:        options.modules.includes('Swagger'),
+      hasMail:           options.modules.includes('Mail'),
+      hasLogging:        options.modules.includes('Logging'),
+      isJwtAuth:         options.authStrategy === 'jwt',
+      isSessionAuth:     options.authStrategy === 'session',
+      isFullstack:       options.projectType  === 'fullstack',
+      isApiOnly:         options.projectType  === 'api',
+      dbDependency:      dbDependencies.dependency,
+      dbDriverClass:     dbDependencies.driverClass,
       dbConfig,
       outputDir,
-      modules: options.modules,
-      year: new Date().getFullYear(),
+      modules:           options.modules,
+      year:              new Date().getFullYear(),
     };
   }
 
-  private toPascalCase(str: string): string {
-    return str.charAt(0).toUpperCase() + str.slice(1);
-  }
-
-  private getDbDependencies(db: string) {
-    switch (db) {
-      case 'mysql': return { dependency: 'mysql', driverClass: 'com.mysql.cj.jdbc.Driver' };
-      case 'postgresql': return { dependency: 'postgresql', driverClass: 'org.postgresql.Driver' };
-      default: return { dependency: 'h2', driverClass: 'org.h2.Driver' };
-    }
-  }
-
-  private getDbConfig(db: string, artifactId: string) {
-    switch (db) {
-      case 'mysql':
-        return {
-          url: `jdbc:mysql://localhost:3306/${artifactId}?useSSL=false&serverTimezone=UTC`,
-          username: 'root',
-          password: 'YOUR_PASSWORD',
-          dialect: 'org.hibernate.dialect.MySQL8Dialect',
-        };
-      case 'postgresql':
-        return {
-          url: `jdbc:postgresql://localhost:5432/${artifactId}`,
-          username: 'postgres',
-          password: 'YOUR_PASSWORD',
-          dialect: 'org.hibernate.dialect.PostgreSQLDialect',
-        };
-      default:
-        return {
-          url: `jdbc:h2:mem:${artifactId};MODE=MySQL`,
-          username: 'sa',
-          password: '',
-          dialect: 'org.hibernate.dialect.H2Dialect',
-        };
-    }
-  }
-
-  private async generateJavaSources(javaBase: string, context: object, hasSwagger: boolean): Promise<void> {
+  private async generateJavaSources(
+    javaBase: string,
+    context: object,
+    options: ProjectOptions,
+  ): Promise<void> {
     const { writeGeneratedFile } = await import('../utils/fileWriter');
     const tDir = path.join(this.templatesDir, 'java');
-    const ctx = context as Record<string, unknown>;
+    const ctx  = context as Record<string, unknown>;
 
+    // ── Always-generated files ───
     const files: Array<[string, string]> = [
-      ['config/SecurityConfig.java', 'config/SecurityConfig.java.ejs'],
-      ['config/CorsConfig.java', 'config/CorsConfig.java.ejs'],
-      ['entity/User.java', 'entity/User.java.ejs'],
-      ['repository/UserRepository.java', 'repository/UserRepository.java.ejs'],
-      ['service/UserService.java', 'service/UserService.java.ejs'],
-      ['service/JwtService.java', 'service/JwtService.java.ejs'],
-      ['controller/AuthController.java', 'controller/AuthController.java.ejs'],
-      ['controller/UserController.java', 'controller/UserController.java.ejs'],
-      ['security/JwtAuthFilter.java', 'security/JwtAuthFilter.java.ejs'],
-      ['security/UserDetailsServiceImpl.java', 'security/UserDetailsServiceImpl.java.ejs'],
-      ['dto/AuthRequest.java', 'dto/AuthRequest.java.ejs'],
-      ['dto/AuthResponse.java', 'dto/AuthResponse.java.ejs'],
-      ['dto/UserDto.java', 'dto/UserDto.java.ejs'],
+      ['entity/User.java',                  'entity/User.java.ejs'],
+      ['entity/Role.java',                  'entity/Role.java.ejs'],
+      ['repository/UserRepository.java',    'repository/UserRepository.java.ejs'],
+      ['service/UserService.java',          'service/UserService.java.ejs'],
+      ['controller/AuthController.java',    'controller/AuthController.java.ejs'],
+      ['controller/UserController.java',    'controller/UserController.java.ejs'],
+      ['controller/HomeController.java',    'controller/HomeController.java.ejs'],
+      ['controller/ProfileController.java', 'controller/ProfileController.java.ejs'],
+      ['controller/AdminController.java',   'controller/AdminController.java.ejs'],
+      ['config/CorsConfig.java',            'config/CorsConfig.java.ejs'],
+      ['dto/AuthRequest.java',              'dto/AuthRequest.java.ejs'],
+      ['dto/AuthResponse.java',             'dto/AuthResponse.java.ejs'],
+      ['dto/RegisterRequest.java',          'dto/RegisterRequest.java.ejs'],
+      ['dto/ProfileUpdateRequest.java',     'dto/ProfileUpdateRequest.java.ejs'],
+      ['dto/UserDto.java',                  'dto/UserDto.java.ejs'],
     ];
 
-    if (hasSwagger) {
+    // ── JWT-only files ───
+    if (options.authStrategy === 'jwt') {
+      files.push(
+        ['service/JwtService.java',               'service/JwtService.java.ejs'],
+        ['security/JwtAuthFilter.java',            'security/JwtAuthFilter.java.ejs'],
+        ['security/UserDetailsServiceImpl.java',   'security/UserDetailsServiceImpl.java.ejs'],
+        ['config/SecurityConfig.java',             'config/SecurityConfig.java.ejs'],
+      );
+    } else {
+      // Session auth
+      files.push(
+        ['security/UserDetailsServiceImpl.java',   'security/UserDetailsServiceImpl.java.ejs'],
+        ['config/SecurityConfig.java',             'config/SecurityConfigSession.java.ejs'],
+      );
+    }
+
+    // ── Swagger ───
+    if (options.modules.includes('Swagger')) {
       files.push(['config/SwaggerConfig.java', 'config/SwaggerConfig.java.ejs']);
     }
 
     for (const [outName, tplName] of files) {
-      await writeGeneratedFile(
-        path.join(javaBase, outName),
-        path.join(tDir, tplName),
-        ctx,
-      );
+      const tplPath = path.join(tDir, tplName);
+      if (await fs.pathExists(tplPath)) {
+        await writeGeneratedFile(path.join(javaBase, outName), tplPath, ctx);
+      } else {
+        logger.warn(`Template not found, skipping: ${tplName}`);
+      }
     }
   }
 
-  private async generateResources(resourcesBase: string, context: object, options: ProjectOptions): Promise<void> {
+  private async generateResources(
+    resourcesBase: string,
+    context: object,
+    options: ProjectOptions,
+  ): Promise<void> {
     const { writeGeneratedFile } = await import('../utils/fileWriter');
     const tDir = path.join(this.templatesDir, 'resources');
-    const ctx = context as Record<string, unknown>;
+    const ctx  = context as Record<string, unknown>;
 
     await writeGeneratedFile(
       path.join(resourcesBase, 'application.yml'),
@@ -282,18 +316,129 @@ dependencies {
     }
   }
 
+  private async generateFrontend(
+    outputDir: string,
+    context: object,
+    options: ProjectOptions,
+    isThymeleaf: boolean,
+  ): Promise<void> {
+    const { writeGeneratedFile } = await import('../utils/fileWriter');
+    const ctx = context as Record<string, unknown>;
+
+    if (isThymeleaf) {
+      // ── Session + Thymeleaf ─────────────────────────────────
+      const tDir      = path.join(this.templatesDir, 'thymeleaf');
+      const targetDir = path.join(outputDir, 'src/main/resources/templates');
+      await fs.ensureDir(targetDir);
+      await fs.ensureDir(path.join(targetDir, 'admin'));
+
+      const pages: Array<[string, string]> = [
+        ['login.html',         'login.html.ejs'],
+        ['register.html',      'register.html.ejs'],
+        ['dashboard.html',     'dashboard.html.ejs'],
+        ['profile.html',       'profile.html.ejs'],
+        ['admin/users.html',   'admin/users.html.ejs'],
+      ];
+      for (const [out, tpl] of pages) {
+        await writeGeneratedFile(path.join(targetDir, out), path.join(tDir, tpl), ctx);
+      }
+
+      // Shared CSS → static/assets/
+      const cssDir = path.join(outputDir, 'src/main/resources/static/assets');
+      await fs.ensureDir(cssDir);
+      await fs.copyFile(
+        path.join(this.templatesDir, 'static/assets/style.css'),
+        path.join(cssDir, 'style.css'),
+      );
+    } else {
+      // ── JWT + Static SPA ────────────────────────────────────
+      const tDir      = path.join(this.templatesDir, 'static');
+      const targetDir = path.join(outputDir, 'src/main/resources/static');
+      await fs.ensureDir(path.join(targetDir, 'assets'));
+
+      // index.html (EJS rendered with project context)
+      await writeGeneratedFile(
+        path.join(targetDir, 'index.html'),
+        path.join(tDir, 'index.html.ejs'),
+        ctx,
+      );
+
+      // app.js (EJS rendered — contains projectName)
+      await writeGeneratedFile(
+        path.join(targetDir, 'assets/app.js'),
+        path.join(tDir, 'assets/app.js.ejs'),
+        ctx,
+      );
+
+      // style.css (plain copy)
+      await fs.copyFile(
+        path.join(tDir, 'assets/style.css'),
+        path.join(targetDir, 'assets/style.css'),
+      );
+    }
+  }
+
+  private toPascalCase(str: string): string {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  }
+
+  private getDbDependencies(db: string) {
+    switch (db) {
+      case 'mysql':      return { dependency: 'mysql',      driverClass: 'com.mysql.cj.jdbc.Driver' };
+      case 'postgresql': return { dependency: 'postgresql', driverClass: 'org.postgresql.Driver' };
+      default:           return { dependency: 'h2',         driverClass: 'org.h2.Driver' };
+    }
+  }
+
+  private getDbConfig(db: string, artifactId: string) {
+    switch (db) {
+      case 'mysql':
+        return {
+          url:      `jdbc:mysql://localhost:3306/${artifactId}?useSSL=false&serverTimezone=UTC`,
+          username: 'root',
+          password: 'YOUR_PASSWORD',
+          dialect:  'org.hibernate.dialect.MySQL8Dialect',
+        };
+      case 'postgresql':
+        return {
+          url:      `jdbc:postgresql://localhost:5432/${artifactId}`,
+          username: 'postgres',
+          password: 'YOUR_PASSWORD',
+          dialect:  'org.hibernate.dialect.PostgreSQLDialect',
+        };
+      default:
+        return {
+          url:      `jdbc:h2:mem:${artifactId};MODE=MySQL`,
+          username: 'sa',
+          password: '',
+          dialect:  'org.hibernate.dialect.H2Dialect',
+        };
+    }
+  }
+
   private printSuccessMessage(options: ProjectOptions): void {
-    logger.success(`\nProject "${options.projectName}" is ready!\n`);
+    const isJwt      = options.authStrategy === 'jwt';
+    const isFullstack = options.projectType === 'fullstack';
+    const runCmd     = options.buildTool === 'maven' ? './mvnw spring-boot:run' : './gradlew bootRun';
+
+    console.log();
+    logger.success(`Project "${options.projectName}" is ready!\n`);
     console.log(`  Next steps:\n`);
     console.log(`    cd ${options.projectName}`);
-    if (options.buildTool === 'maven') {
-      console.log(`    ./mvnw spring-boot:run`);
-    } else {
-      console.log(`    ./gradlew bootRun`);
+    console.log(`    ${runCmd}`);
+    console.log();
+    console.log(`  Endpoints:`);
+    console.log(`    Home          http://localhost:8080/`);
+    if (isFullstack) {
+      console.log(`    Dashboard     http://localhost:8080/${isJwt ? '' : 'dashboard'}`);
     }
-    console.log('');
-    console.log(`  API Docs: http://localhost:8080/swagger-ui.html`);
-    console.log(`  Health:   http://localhost:8080/actuator/health`);
-    console.log('');
+    if (options.modules.includes('Swagger')) {
+      console.log(`    API Docs      http://localhost:8080/swagger-ui/index.html`);
+    }
+    console.log(`    Health        http://localhost:8080/actuator/health`);
+    console.log();
+    console.log(`  Auth strategy:  ${isJwt ? 'JWT (stateless)' : 'Session (form-login)'}`);
+    console.log(`  Project type:   ${isFullstack ? 'Fullstack' : 'REST API only'}`);
+    console.log();
   }
 }

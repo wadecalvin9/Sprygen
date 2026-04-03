@@ -1,12 +1,12 @@
-package <%= packageName %>.controller;
+package com.example.starter.controller;
 
-import <%= packageName %>.dto.AuthRequest;
-import <%= packageName %>.dto.AuthResponse;
-import <%= packageName %>.dto.RegisterRequest;
-import <%= packageName %>.entity.Role;
-import <%= packageName %>.entity.User;
-import <%= packageName %>.repository.UserRepository;
-import <%= packageName %>.service.JwtService;
+import com.example.starter.dto.AuthRequest;
+import com.example.starter.dto.AuthResponse;
+import com.example.starter.dto.RegisterRequest;
+import com.example.starter.entity.Role;
+import com.example.starter.entity.User;
+import com.example.starter.repository.UserRepository;
+import com.example.starter.service.JwtService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

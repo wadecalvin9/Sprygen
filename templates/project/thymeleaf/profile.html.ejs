@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+                xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Profile — <%= projectName %></title>
+  <link rel="stylesheet" th:href="@{/assets/style.css}"/>
+</head>
+<body>
+<div id="app">
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="logo-icon">⚡</div>
+      <span class="logo-text"><%= projectName %></span>
+    </div>
+    <nav class="sidebar-nav">
+      <span class="nav-section-label">Navigation</span>
+      <a class="nav-link" th:href="@{/dashboard}"><span class="icon">⊞</span> Dashboard</a>
+      <a class="nav-link active" th:href="@{/profile}"><span class="icon">◉</span> Profile</a>
+      <sec:authorize access="hasAuthority('ROLE_ADMIN')">
+        <span class="nav-section-label">Administration</span>
+        <a class="nav-link" th:href="@{/admin/users}"><span class="icon">⚙</span> Admin Panel</a>
+      </sec:authorize>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-widget">
+        <div class="user-avatar" th:text="${#strings.substring(user.firstName,0,1) + #strings.substring(user.lastName,0,1)}">??</div>
+        <div class="user-info">
+          <div class="user-name" th:text="${user.firstName + ' ' + user.lastName}">User</div>
+          <div class="user-role">
+            <sec:authorize access="hasAuthority('ROLE_ADMIN')">👑 Admin</sec:authorize>
+            <sec:authorize access="!hasAuthority('ROLE_ADMIN')">🙂 User</sec:authorize>
+          </div>
+        </div>
+      </div>
+      <form th:action="@{/logout}" method="post" style="margin-top:10px;">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+        <button type="submit" class="btn btn-outline btn-full" style="font-size:0.8rem;">Sign Out</button>
+      </form>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar"><span class="topbar-title">My Profile</span></div>
+    <div class="page">
+
+      <!-- Success/error flash -->
+      <div th:if="${success}" class="alert alert-success visible" th:text="${success}"></div>
+      <div th:if="${error}"   class="alert alert-error visible"   th:text="${error}"></div>
+
+      <!-- Profile hero -->
+      <div class="profile-hero">
+        <div class="profile-avatar-lg"
+             th:text="${#strings.substring(user.firstName,0,1) + #strings.substring(user.lastName,0,1)}">??</div>
+        <div class="profile-hero-info">
+          <h2 th:text="${user.firstName + ' ' + user.lastName}">Name</h2>
+          <p th:text="${user.email}">email@example.com</p>
+          <div style="margin-top:8px;">
+            <sec:authorize access="hasAuthority('ROLE_ADMIN')">
+              <span class="badge badge-admin">👑 Admin</span>
+            </sec:authorize>
+            <sec:authorize access="!hasAuthority('ROLE_ADMIN')">
+              <span class="badge badge-user">User</span>
+            </sec:authorize>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+        <!-- Update profile -->
+        <div class="card">
+          <div class="card-body">
+            <div class="card-title">Personal Information</div>
+            <div class="card-muted" style="margin-bottom:20px;">Update your name and bio</div>
+            <form th:action="@{/profile}" method="post">
+              <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <div class="form-group">
+                  <label>First Name</label>
+                  <input name="firstName" type="text" th:value="${user.firstName}" required/>
+                </div>
+                <div class="form-group">
+                  <label>Last Name</label>
+                  <input name="lastName" type="text" th:value="${user.lastName}" required/>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Bio</label>
+                <textarea name="bio" rows="3" placeholder="Tell us about yourself…" th:text="${user.bio}"></textarea>
+              </div>
+              <div class="form-group">
+                <label>Avatar URL</label>
+                <input name="avatarUrl" type="url" th:value="${user.avatarUrl}" placeholder="https://…"/>
+              </div>
+              <button type="submit" class="btn btn-primary">Save Changes</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Change password -->
+        <div class="card">
+          <div class="card-body">
+            <div class="card-title">Change Password</div>
+            <div class="card-muted" style="margin-bottom:20px;">Update your password</div>
+            <form th:action="@{/profile/password}" method="post">
+              <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+              <div class="form-group">
+                <label>Current Password</label>
+                <input name="currentPassword" type="password" placeholder="••••••••"/>
+              </div>
+              <div class="form-group">
+                <label>New Password</label>
+                <input name="newPassword" type="password" placeholder="••••••••"/>
+              </div>
+              <div class="form-group">
+                <label>Confirm New Password</label>
+                <input name="confirmPassword" type="password" placeholder="••••••••"/>
+              </div>
+              <button type="submit" class="btn btn-primary">Update Password</button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</div>
+</body>
+</html>

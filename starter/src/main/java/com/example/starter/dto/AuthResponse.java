@@ -1,4 +1,4 @@
-package <%= packageName %>.dto;
+package com.example.starter.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

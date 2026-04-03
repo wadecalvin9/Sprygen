@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+                xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title th:text="${pageTitle} + ' — <%= projectName %>'">Page — <%= projectName %></title>
+  <link rel="stylesheet" th:href="@{/assets/style.css}" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
+</head>
+<body>
+
+<div id="app">
+  <!-- App shell with sidebar -->
+  <div class="layout" sec:authorize="isAuthenticated()">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="logo-icon">⚡</div>
+        <span class="logo-text"><%= projectName %></span>
+      </div>
+      <nav class="sidebar-nav">
+        <span class="nav-section-label">Navigation</span>
+        <a class="nav-link" th:classappend="${activePage == 'dashboard'} ? 'active'" th:href="@{/dashboard}">
+          <span class="icon">⊞</span> Dashboard
+        </a>
+        <a class="nav-link" th:classappend="${activePage == 'profile'} ? 'active'" th:href="@{/profile}">
+          <span class="icon">◉</span> Profile
+        </a>
+        <sec:authorize access="hasAuthority('ROLE_ADMIN')">
+          <span class="nav-section-label">Administration</span>
+          <a class="nav-link" th:classappend="${activePage == 'admin'} ? 'active'" th:href="@{/admin/users}">
+            <span class="icon">⚙</span> Admin Panel
+          </a>
+        </sec:authorize>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="user-widget">
+          <div class="user-avatar" sec:authentication="principal.firstName"
+               th:text="${#strings.substring(#authentication.principal.firstName,0,1) + #strings.substring(#authentication.principal.lastName,0,1)}">??</div>
+          <div class="user-info">
+            <div class="user-name" sec:authentication="name"
+                 th:text="${#authentication.principal.firstName + ' ' + #authentication.principal.lastName}">User</div>
+            <div class="user-role">
+              <sec:authorize access="hasAuthority('ROLE_ADMIN')">👑 Admin</sec:authorize>
+              <sec:authorize access="!hasAuthority('ROLE_ADMIN')">🙂 User</sec:authorize>
+            </div>
+          </div>
+        </div>
+        <form th:action="@{/logout}" method="post" style="margin-top:10px;">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+          <button type="submit" class="btn btn-outline btn-full" style="font-size:0.8rem;">Sign Out</button>
+        </form>
+      </div>
+    </aside>
+
+    <!-- Main content -->
+    <div class="main">
+      <div class="topbar">
+        <span class="topbar-title" th:text="${pageTitle}">Page</span>
+      </div>
+      <div class="page" th:replace="${content}">
+        <!-- Page content inserted here -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Unauthenticated: just render content directly (login/register pages) -->
+  <div sec:authorize="!isAuthenticated()" th:replace="${content}"><!-- auth page content --></div>
+</div>
+
+</body>
+</html>

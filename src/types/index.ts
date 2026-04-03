@@ -8,6 +8,8 @@ export interface ProjectOptions {
   javaVersion: string;
   springBootVersion: string;
   description: string;
+  authStrategy: 'jwt' | 'session';
+  projectType: 'api' | 'fullstack';
 }
 
 export interface EntityOptions {

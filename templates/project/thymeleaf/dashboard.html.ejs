@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+                xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard — <%= projectName %></title>
+  <link rel="stylesheet" th:href="@{/assets/style.css}"/>
+</head>
+<body>
+<div id="app">
+<div class="layout">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="logo-icon">⚡</div>
+      <span class="logo-text"><%= projectName %></span>
+    </div>
+    <nav class="sidebar-nav">
+      <span class="nav-section-label">Navigation</span>
+      <a class="nav-link active" th:href="@{/dashboard}"><span class="icon">⊞</span> Dashboard</a>
+      <a class="nav-link" th:href="@{/profile}"><span class="icon">◉</span> Profile</a>
+      <sec:authorize access="hasAuthority('ROLE_ADMIN')">
+        <span class="nav-section-label">Administration</span>
+        <a class="nav-link" th:href="@{/admin/users}"><span class="icon">⚙</span> Admin Panel</a>
+      </sec:authorize>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-widget">
+        <div class="user-avatar"
+             th:text="${#strings.substring(user.firstName,0,1) + #strings.substring(user.lastName,0,1)}">??</div>
+        <div class="user-info">
+          <div class="user-name" th:text="${user.firstName + ' ' + user.lastName}">User</div>
+          <div class="user-role">
+            <sec:authorize access="hasAuthority('ROLE_ADMIN')">👑 Admin</sec:authorize>
+            <sec:authorize access="!hasAuthority('ROLE_ADMIN')">🙂 User</sec:authorize>
+          </div>
+        </div>
+      </div>
+      <form th:action="@{/logout}" method="post" style="margin-top:10px;">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+        <button type="submit" class="btn btn-outline btn-full" style="font-size:0.8rem;">Sign Out</button>
+      </form>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <div class="main">
+    <div class="topbar">
+      <span class="topbar-title">Dashboard</span>
+      <span style="font-size:0.85rem;color:var(--text-muted);"
+            th:text="${#temporals.format(#temporals.createNow(), 'EEEE, MMMM d')}"></span>
+    </div>
+    <div class="page">
+      <div class="page-header">
+        <h1>Welcome back, <span th:text="${user.firstName}">User</span> 👋</h1>
+        <p>Here's an overview of your account and the application.</p>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">👤</div>
+          <div class="stat-value">
+            <sec:authorize access="hasAuthority('ROLE_ADMIN')">Admin</sec:authorize>
+            <sec:authorize access="!hasAuthority('ROLE_ADMIN')">User</sec:authorize>
+          </div>
+          <div class="stat-label">Your Role</div>
+        </div>
+
+        <sec:authorize access="hasAuthority('ROLE_ADMIN')">
+          <div class="stat-card">
+            <div class="stat-icon">👥</div>
+            <div class="stat-value" th:text="${totalUsers}">—</div>
+            <div class="stat-label">Total Users</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">🛡️</div>
+            <div class="stat-value" th:text="${adminCount}">—</div>
+            <div class="stat-label">Admins</div>
+          </div>
+        </sec:authorize>
+      </div>
+
+      <div class="card">
+        <div class="card-body">
+          <div class="section-header">
+            <span class="section-title">API Quick Reference</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Method</th><th>Route</th><th>Access</th></tr></thead>
+              <tbody>
+                <tr><td><span style="color:#10b981;font-weight:700;font-size:0.8rem;">POST</span></td><td style="font-family:monospace;font-size:0.82rem;">/api/v1/auth/register</td><td><span class="badge badge-success">Public</span></td></tr>
+                <tr><td><span style="color:#10b981;font-weight:700;font-size:0.8rem;">POST</span></td><td style="font-family:monospace;font-size:0.82rem;">/api/v1/auth/login</td><td><span class="badge badge-success">Public</span></td></tr>
+                <tr><td><span style="color:#60a5fa;font-weight:700;font-size:0.8rem;">GET</span></td><td style="font-family:monospace;font-size:0.82rem;">/api/v1/profile</td><td><span class="badge badge-user">Auth</span></td></tr>
+                <tr><td><span style="color:#f59e0b;font-weight:700;font-size:0.8rem;">PUT</span></td><td style="font-family:monospace;font-size:0.82rem;">/api/v1/profile</td><td><span class="badge badge-user">Auth</span></td></tr>
+                <tr><td><span style="color:#60a5fa;font-weight:700;font-size:0.8rem;">GET</span></td><td style="font-family:monospace;font-size:0.82rem;">/api/v1/admin/users</td><td><span class="badge badge-admin">Admin</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+</body>
+</html>

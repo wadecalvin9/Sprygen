@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sign In — <%= projectName %></title>
+  <link rel="stylesheet" th:href="@{/assets/style.css}"/>
+</head>
+<body>
+<div id="app">
+  <div class="auth-page">
+    <div class="auth-container">
+      <div class="auth-brand">
+        <div class="logo-icon-lg">⚡</div>
+        <h1><%= projectName %></h1>
+        <p>Sign in to your account</p>
+      </div>
+      <div class="auth-card">
+
+        <!-- Error alert -->
+        <div th:if="${param.error}" class="alert alert-error visible">
+          Invalid email or password. Please try again.
+        </div>
+        <!-- Logout success -->
+        <div th:if="${param.logout}" class="alert alert-success visible">
+          You have been signed out successfully.
+        </div>
+
+        <form th:action="@{/login}" method="post">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <div class="form-group">
+            <label for="username">Email address</label>
+            <input id="username" name="username" type="email" placeholder="you@example.com" required autofocus/>
+          </div>
+          <div class="form-group">
+            <label for="password">Password</label>
+            <input id="password" name="password" type="password" placeholder="••••••••" required/>
+          </div>
+          <button type="submit" class="btn btn-primary btn-full">Sign In</button>
+        </form>
+
+        <div class="divider"></div>
+        <p style="text-align:center;font-size:0.85rem;color:var(--text-muted);">
+          Don't have an account?
+          <a th:href="@{/register}" style="color:var(--primary);text-decoration:none;font-weight:600;">Create one</a>
+        </p>
+        <p style="text-align:center;font-size:0.82rem;color:var(--text-dim);margin-top:8px;">
+          <a th:href="@{/}" style="color:var(--text-dim);">← Back to home</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

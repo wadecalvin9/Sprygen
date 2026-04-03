@@ -1,4 +1,4 @@
-package <%= packageName %>.entity;
+package com.example.starter.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
