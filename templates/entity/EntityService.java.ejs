@@ -1,0 +1,32 @@
+package <%= packageName %>.service;
+
+import <%= packageName %>.entity.<%= entityName %>;
+import <%= packageName %>.repository.<%= entityName %>Repository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Optional;
+
+@Service
+@RequiredArgsConstructor
+public class <%= entityName %>Service {
+
+    private final <%= entityName %>Repository repository;
+
+    public List<<%= entityName %>> findAll() {
+        return repository.findAll();
+    }
+
+    public Optional<<%= entityName %>> findById(Long id) {
+        return repository.findById(id);
+    }
+
+    public <%= entityName %> save(<%= entityName %> entity) {
+        return repository.save(entity);
+    }
+
+    public void deleteById(Long id) {
+        repository.deleteById(id);
+    }
+}

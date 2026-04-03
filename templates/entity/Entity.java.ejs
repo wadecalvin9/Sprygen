@@ -1,0 +1,40 @@
+package <%= packageName %>.entity;
+
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+<%_ 
+  const hasLocalDate = fields.some(f => f.type === 'LocalDate');
+  const hasLocalDateTime = fields.some(f => f.type === 'LocalDateTime');
+
+  if (hasLocalDate) { _%>
+import java.time.LocalDate;
+<%_ }
+  if (hasLocalDateTime) { _%>
+import java.time.LocalDateTime;
+<%_ } _%>
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@Entity
+@Table(name = "<%= entityNameLower %>s")
+public class <%= entityName %> {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+<%_ for (let i = 0; i < fields.length; i++) { 
+        let field = fields[i]; _%>
+    <%_ if (!field.nullable) { _%>
+    @Column(nullable = false)
+    <%_ } _%>
+    private <%= field.type %> <%= field.name %>;
+
+<%_ } _%>
+}

@@ -1,0 +1,67 @@
+package <%= packageName %>.controller;
+
+import <%= packageName %>.dto.AuthRequest;
+import <%= packageName %>.dto.AuthResponse;
+import <%= packageName %>.entity.User;
+import <%= packageName %>.repository.UserRepository;
+import <%= packageName %>.service.JwtService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/v1/auth")
+@RequiredArgsConstructor
+public class AuthController {
+
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
+    private final AuthenticationManager authenticationManager;
+
+    @PostMapping("/register")
+    public ResponseEntity<AuthResponse> register(@RequestBody User request) {
+        if (userRepository.existsByEmail(request.getEmail())) {
+            return ResponseEntity.badRequest().build(); // Add proper error handling
+        }
+
+        var user = User.builder()
+                .firstName(request.getFirstName())
+                .lastName(request.getLastName())
+                .email(request.getEmail())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .build();
+                
+        userRepository.save(user);
+        var jwtToken = jwtService.generateToken(user);
+        
+        return ResponseEntity.ok(AuthResponse.builder()
+                .token(jwtToken)
+                .build());
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<AuthResponse> login(@RequestBody AuthRequest request) {
+        authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        request.getEmail(),
+                        request.getPassword()
+                )
+        );
+        
+        var user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow();
+                
+        var jwtToken = jwtService.generateToken(user);
+        
+        return ResponseEntity.ok(AuthResponse.builder()
+                .token(jwtToken)
+                .build());
+    }
+}

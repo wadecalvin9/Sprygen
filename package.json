@@ -1,0 +1,50 @@
+{
+  "name": "sprygen",
+  "version": "1.0.0",
+  "description": "A JHipster-like Spring Boot project generator CLI written in TypeScript",
+  "main": "dist/cli.js",
+  "bin": {
+    "sprygen": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "templates"
+  ],
+  "scripts": {
+    "build": "tsup src/cli.ts --format cjs --minify --out-dir dist",
+    "dev": "ts-node src/cli.ts",
+    "lint": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "chalk": "4.1.2",
+    "commander": "^11.1.0",
+    "ejs": "^3.1.10",
+    "fs-extra": "^11.2.0",
+    "inquirer": "^8.2.6",
+    "ora": "5.4.1"
+  },
+  "devDependencies": {
+    "@types/ejs": "^3.1.5",
+    "@types/fs-extra": "^11.0.4",
+    "@types/inquirer": "^8.2.10",
+    "@types/node": "^20.11.0",
+    "ts-node": "^10.9.2",
+    "tsup": "^8.0.2",
+    "typescript": "^5.3.3"
+  },
+  "keywords": [
+    "spring-boot",
+    "generator",
+    "scaffold",
+    "jhipster",
+    "java",
+    "jwt",
+    "cli"
+  ],
+  "author": "Sprygen",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

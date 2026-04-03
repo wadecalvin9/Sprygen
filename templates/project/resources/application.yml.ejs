@@ -1,0 +1,41 @@
+spring:
+  application:
+    name: <%= projectName %>
+  
+  datasource:
+    url: ${DB_URL:<%= dbConfig.url %>}
+    username: ${DB_USER:<%= dbConfig.username %>}
+    password: ${DB_PASS:<%= dbConfig.password %>}
+    driver-class-name: <%= dbDriverClass %>
+
+  jpa:
+    database-platform: <%= dbConfig.dialect %>
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+<%_ if (hasMail) { _%>
+  mail:
+    host: ${MAIL_HOST:smtp.mailtrap.io}
+    port: ${MAIL_PORT:2525}
+    username: ${MAIL_USER:your_username}
+    password: ${MAIL_PASS:your_password}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+<%_ } _%>
+
+jwt:
+  secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+  expiration: ${JWT_EXPIRATION:86400000} # 1 day in ms
+
+server:
+  port: 8080
+  error:
+    include-message: always
