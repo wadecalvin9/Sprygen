@@ -9,7 +9,7 @@ export class AuthGenerator {
   private templatesDir: string;
 
   constructor() {
-    this.templatesDir = path.resolve(__dirname, '../../templates/auth');
+    this.templatesDir = path.resolve(__dirname, '../templates/auth');
   }
 
   async generate(options: AuthOptions): Promise<void> {

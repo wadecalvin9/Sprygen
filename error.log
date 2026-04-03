@@ -1,0 +1,4 @@
+Generating project...
+Error: Directory "my-sprygen-app" already exists. Please choose a different project name or remove the existing directory.
+    at ProjectGenerator.generate (C:\Users\Administrator\Desktop\stuff\projects\Sprygen\src\generator\ProjectGenerator.ts:21:13)
+    at async test_project (C:\Users\Administrator\Desktop\stuff\projects\Sprygen\test-project.ts:22:3)

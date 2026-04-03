@@ -9,7 +9,7 @@ export class EntityGenerator {
   private templatesDir: string;
 
   constructor() {
-    this.templatesDir = path.resolve(__dirname, '../../templates/entity');
+    this.templatesDir = path.resolve(__dirname, '../templates/entity');
   }
 
   async generate(options: EntityOptions): Promise<void> {

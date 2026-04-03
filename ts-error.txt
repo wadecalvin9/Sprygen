@@ -1,0 +1,3 @@
+src/generator/ProjectGenerator.ts(195,16): error TS1127: Invalid character.
+src/generator/ProjectGenerator.ts(195,17): error TS1136: Property assignment expected.
+src/generator/ProjectGenerator.ts(286,1): error TS1160: Unterminated template literal.
