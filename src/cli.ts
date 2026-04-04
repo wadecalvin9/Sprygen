@@ -7,10 +7,12 @@ import { updateCommand } from './commands/update';
 
 const program = new Command();
 
+const { version } = require('../package.json');
+
 program
   .name('sprygen')
   .description('A production-ready Spring Boot project generator CLI')
-  .version('1.0.3');
+  .version(version);
 
 program
   .command('new <project-name>')

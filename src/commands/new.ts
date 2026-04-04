@@ -5,7 +5,7 @@ import { validatePackageName, validateProjectName, toPackagePath } from '../util
 import { logger, printBanner, printSection } from '../utils/logger';
 
 export async function newCommand(projectName: string): Promise<void> {
-  printBanner('1.0.0');
+  printBanner();
 
   const validResult = validateProjectName(projectName);
   if (typeof validResult === 'string') {

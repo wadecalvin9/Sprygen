@@ -20,8 +20,9 @@ const LOGO = [
 ];
 
 // ── Render the banner ─────────────────────────────────────────
-export function printBanner(version = '1.0.0'): void {
+export function printBanner(): void {
   console.log();
+  const { version, repository } = require('../../package.json');
 
   // Big logo — top 2 rows slightly dimmer, main rows bright
   LOGO.forEach((line, i) => {
@@ -42,6 +43,10 @@ export function printBanner(version = '1.0.0'): void {
     chalk.dim(ver) +
     '\n'
   );
+  
+  // GitHub Link row
+  const githubRepo = repository?.url?.replace('git+', '').replace('.git', '') || 'https://github.com/wadecalvin9/Sprygen';
+  process.stdout.write(chalk.dim(`  ${githubRepo}\n`));
 
   // Rule
   console.log(chalk.hex(G.soft)('  ' + '─'.repeat(62)));
