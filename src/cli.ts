@@ -3,13 +3,14 @@ import { Command } from 'commander';
 import { newCommand } from './commands/new';
 import { addEntityCommand } from './commands/addEntity';
 import { generateAuthCommand } from './commands/generateAuth';
+import { updateCommand } from './commands/update';
 
 const program = new Command();
 
 program
   .name('sprygen')
-  .description('A JHipster-like Spring Boot project generator CLI')
-  .version('1.0.0');
+  .description('A production-ready Spring Boot project generator CLI')
+  .version('1.0.3');
 
 program
   .command('new <project-name>')
@@ -30,6 +31,13 @@ program
   .description('Scaffold JWT authentication and security configuration in an existing project')
   .action(async () => {
     await generateAuthCommand();
+  });
+
+program
+  .command('update')
+  .description('Update Sprygen to the latest version')
+  .action(() => {
+    updateCommand();
   });
 
 // Setup parsing of the CLI args
