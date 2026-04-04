@@ -1,6 +1,6 @@
 {
   "name": "sprygen",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A production-ready Spring Boot project generator CLI. Scaffold secure, structured Java applications with built-in JWT or session authentication, role-based access control, user management, and an optional fullstack frontend — all from a single interactive command.",
   "main": "dist/cli.js",
   "bin": {
@@ -50,6 +50,14 @@
   ],
   "author": "Sprygen",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wadecalvin9/Sprygen.git"
+  },
+  "bugs": {
+    "url": "https://github.com/wadecalvin9/Sprygen/issues"
+  },
+  "homepage": "https://github.com/wadecalvin9/Sprygen#readme",
   "engines": {
     "node": ">=18.0.0"
   }

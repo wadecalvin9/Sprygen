@@ -1,0 +1,50 @@
+name: Publish Package to npmjs
+
+on:
+  release:
+    types: [published]
+  # Allows you to trigger this manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      # Setup .npmrc to let npm know we are using the npmjs registry
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+          
+      - run: npm ci
+      - run: npm run build
+      
+  publish-npm:
+    needs: build
+    runs-on: ubuntu-latest
+    
+    # Required for npm provenance
+    permissions:
+      contents: read
+      id-token: write
+      
+    # Use the npm environment if you configure one in GitHub
+    environment: npm
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+          
+      - run: npm ci
+      - run: npm run build
+      
+      # Publishes using the provenance flag for verified releases
+      - run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
