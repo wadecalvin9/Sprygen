@@ -1,6 +1,6 @@
 {
   "name": "sprygen",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A production-ready Spring Boot project generator CLI. Scaffold secure, structured Java applications with built-in JWT or session authentication, role-based access control, user management, and an optional fullstack frontend — all from a single interactive command.",
   "main": "dist/cli.js",
   "bin": {
