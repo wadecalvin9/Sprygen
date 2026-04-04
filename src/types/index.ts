@@ -10,6 +10,7 @@ export interface ProjectOptions {
   description: string;
   authStrategy: 'jwt' | 'session';
   projectType: 'api' | 'fullstack';
+  flyway: boolean;
 }
 
 export interface EntityOptions {
@@ -19,13 +20,28 @@ export interface EntityOptions {
   packageName: string;
   packagePath: string;
   fields: EntityField[];
+  relations: EntityRelation[];
   projectDir: string;
+  flyway: boolean;
 }
 
 export interface EntityField {
   name: string;
   type: string;
   nullable: boolean;
+}
+
+export interface EntityRelation {
+  type: 'ManyToOne' | 'OneToMany' | 'ManyToMany' | 'OneToOne';
+  target: string;       // e.g. "Category"
+  fieldName: string;    // e.g. "category"
+  eager: boolean;
+}
+
+export interface SchemaEntity {
+  name: string;
+  fields: EntityField[];
+  relations?: EntityRelation[];
 }
 
 export interface AuthOptions {

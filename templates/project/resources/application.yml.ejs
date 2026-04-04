@@ -11,9 +11,6 @@ spring:
       maximum-pool-size: ${DB_POOL_SIZE:10}
 
   jpa:
-  <%_ if (dbConfig.dialect) { _%>
-    database-platform: <%- dbConfig.dialect %>
-  <%_ } _%>
     hibernate:
       ddl-auto: ${DDL_AUTO:update}
     show-sql: false
@@ -26,6 +23,14 @@ spring:
     console:
       enabled: true
       path: /h2-console
+<%_ } _%>
+
+<%_ if (flyway) { _%>
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
 <%_ } _%>
 
 <%_ if (hasMail) { _%>
@@ -43,7 +48,7 @@ spring:
 <%_ } _%>
 
 jwt:
-  secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970_UPDATE_ME_IN_PROD}
+  secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
   expiration: ${JWT_EXPIRATION:86400000} # 24h
 
 app:

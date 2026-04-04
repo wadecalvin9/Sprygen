@@ -1,0 +1,17 @@
+package <%= packageName %>.dto;
+
+import lombok.Data;
+
+/**
+ * Filter criteria DTO for <%= entityName %>.
+ * Pass these as query parameters, e.g. /api/v1/<%= entityNameLower %>s?page=0&size=20
+ */
+@Data
+public class <%= entityName %>Filter {
+
+<%_ for (const field of fields) { _%>
+    /** Filter by <%= field.name %> (nullable — omit to skip this filter) */
+    private <%= field.type %> <%= field.name %>;
+
+<%_ } _%>
+}

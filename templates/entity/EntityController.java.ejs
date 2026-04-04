@@ -1,17 +1,22 @@
 package <%= packageName %>.controller;
 
 import <%= packageName %>.dto.<%= entityName %>Dto;
-import <%= packageName %>.entity.<%= entityName %>;
+import <%= packageName %>.dto.<%= entityName %>Filter;
 import <%= packageName %>.service.<%= entityName %>Service;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import jakarta.validation.Valid;
-import java.util.List;
-import java.util.stream.Collectors;
-
+/**
+ * REST controller for {@link <%= packageName %>.entity.<%= entityName %>}.
+ * This layer is intentionally thin — all business logic lives in the service.
+ */
 @RestController
 @RequestMapping("/api/v1/<%= entityNameLower %>s")
 @RequiredArgsConstructor
@@ -19,74 +24,45 @@ public class <%= entityName %>Controller {
 
     private final <%= entityName %>Service service;
 
+    /**
+     * GET /api/v1/<%= entityNameLower %>s
+     * Supports pagination: ?page=0&size=20&sort=id,desc
+     * Supports filtering: ?<%= fields[0] ? fields[0].name : 'field' %>=value (any field in <%= entityName %>Filter)
+     */
     @GetMapping
-    public ResponseEntity<List<<%= entityName %>Dto>> getAll() {
-        List<<%= entityName %>Dto> list = service.findAll().stream()
-                .map(this::mapToDto)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(list);
+    public ResponseEntity<Page<<%= entityName %>Dto>> getAll(
+            @ModelAttribute <%= entityName %>Filter filter,
+            @PageableDefault(size = 20, sort = "id", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        return ResponseEntity.ok(service.findAll(filter, pageable));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<<%= entityName %>Dto> getById(@PathVariable Long id) {
         return service.findById(id)
-                .map(this::mapToDto)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
     public ResponseEntity<<%= entityName %>Dto> create(@Valid @RequestBody <%= entityName %>Dto dto) {
-        <%= entityName %> entity = mapToEntity(dto);
-        <%= entityName %> saved = service.save(entity);
-        return ResponseEntity.status(HttpStatus.CREATED).body(mapToDto(saved));
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.create(dto));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<<%= entityName %>Dto> update(@PathVariable Long id, @Valid @RequestBody <%= entityName %>Dto dto) {
-        return service.findById(id)
-                .map(existing -> {
-                    // Update fields here
-<%_ for (let i = 0; i < fields.length; i++) { 
-        let field = fields[i];
-        let pascalName = field.name.charAt(0).toUpperCase() + field.name.slice(1); _%>
-                    existing.set<%= pascalName %>(dto.get<%= pascalName %>());
-<%_ } _%>
-                    return service.save(existing);
-                })
-                .map(this::mapToDto)
+    public ResponseEntity<<%= entityName %>Dto> update(
+            @PathVariable Long id,
+            @Valid @RequestBody <%= entityName %>Dto dto
+    ) {
+        return service.update(id, dto)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
-        if (service.findById(id).isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-        service.deleteById(id);
-        return ResponseEntity.noContent().build();
-    }
-
-    private <%= entityName %>Dto mapToDto(<%= entityName %> entity) {
-        return <%= entityName %>Dto.builder()
-                .id(entity.getId())
-<%_ for (let i = 0; i < fields.length; i++) { 
-        let field = fields[i];
-        let pascalName = field.name.charAt(0).toUpperCase() + field.name.slice(1); _%>
-                .<%= field.name %>(entity.get<%= pascalName %>())
-<%_ } _%>
-                .build();
-    }
-
-    private <%= entityName %> mapToEntity(<%= entityName %>Dto dto) {
-        return <%= entityName %>.builder()
-                .id(dto.getId())
-<%_ for (let i = 0; i < fields.length; i++) { 
-        let field = fields[i];
-        let pascalName = field.name.charAt(0).toUpperCase() + field.name.slice(1); _%>
-                .<%= field.name %>(dto.get<%= pascalName %>())
-<%_ } _%>
-                .build();
+        return service.deleteById(id)
+                ? ResponseEntity.noContent().build()
+                : ResponseEntity.notFound().build();
     }
 }

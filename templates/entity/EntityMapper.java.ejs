@@ -1,0 +1,30 @@
+package <%= packageName %>.mapper;
+
+import <%= packageName %>.dto.<%= entityName %>Dto;
+import <%= packageName %>.entity.<%= entityName %>;
+import org.mapstruct.Mapper;
+import org.mapstruct.MappingTarget;
+import org.mapstruct.ReportingPolicy;
+
+import java.util.List;
+
+/**
+ * MapStruct compile-time mapper for {@link <%= entityName %>}.
+ * {@code unmappedTargetPolicy = IGNORE} prevents compile errors when the DTO
+ * and entity diverge during feature iteration.
+ */
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
+public interface <%= entityName %>Mapper {
+
+    /** Convert entity → response DTO */
+    <%= entityName %>Dto toDto(<%= entityName %> entity);
+
+    /** Convert request DTO → entity (for create) */
+    <%= entityName %> toEntity(<%= entityName %>Dto dto);
+
+    /** Bulk conversion for page content */
+    List<<%= entityName %>Dto> toDtoList(List<<%= entityName %>> entities);
+
+    /** Update an existing entity in-place from a DTO (for update operations) */
+    void updateEntityFromDto(<%= entityName %>Dto dto, @MappingTarget <%= entityName %> entity);
+}

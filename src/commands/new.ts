@@ -105,6 +105,7 @@ export async function newCommand(projectName: string): Promise<void> {
       message: 'Optional modules (space to toggle):',
       choices: [
         { name: 'Swagger / OpenAPI UI', value: 'Swagger', checked: true },
+        { name: 'Flyway Database Migrations', value: 'Flyway' },
         { name: 'Mail  (Spring Mail SMTP)', value: 'Mail' },
         { name: 'Logging (Logback with file appender)', value: 'Logging' },
       ],
@@ -123,6 +124,7 @@ export async function newCommand(projectName: string): Promise<void> {
     description: basics.description,
     authStrategy: authAnswers.authStrategy,
     projectType: authAnswers.projectType,
+    flyway: modulesAnswer.modules.includes('Flyway'),
   };
 
   const generator = new ProjectGenerator();

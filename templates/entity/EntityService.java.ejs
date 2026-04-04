@@ -1,32 +1,64 @@
 package <%= packageName %>.service;
 
+import <%= packageName %>.dto.<%= entityName %>Dto;
+import <%= packageName %>.dto.<%= entityName %>Filter;
 import <%= packageName %>.entity.<%= entityName %>;
+import <%= packageName %>.mapper.<%= entityName %>Mapper;
 import <%= packageName %>.repository.<%= entityName %>Repository;
+import <%= packageName %>.repository.<%= entityName %>Specification;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.Optional;
 
+/**
+ * Service for {@link <%= entityName %>} CRUD operations.
+ * Mapping is handled here (Controller → Service → Mapper → Entity) rather than
+ * in the controller to keep the REST layer thin.
+ */
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class <%= entityName %>Service {
 
     private final <%= entityName %>Repository repository;
+    private final <%= entityName %>Mapper      mapper;
 
-    public List<<%= entityName %>> findAll() {
-        return repository.findAll();
+    /**
+     * Returns a filtered, paginated page of entities.
+     * All filter fields are optional — pass an empty filter to get all records.
+     */
+    public Page<<%= entityName %>Dto> findAll(<%= entityName %>Filter filter, Pageable pageable) {
+        Specification<<%= entityName %>> spec = <%= entityName %>Specification.build(filter);
+        return repository.findAll(spec, pageable).map(mapper::toDto);
     }
 
-    public Optional<<%= entityName %>> findById(Long id) {
-        return repository.findById(id);
+    public Optional<<%= entityName %>Dto> findById(Long id) {
+        return repository.findById(id).map(mapper::toDto);
     }
 
-    public <%= entityName %> save(<%= entityName %> entity) {
-        return repository.save(entity);
+    @Transactional
+    public <%= entityName %>Dto create(<%= entityName %>Dto dto) {
+        <%= entityName %> entity = mapper.toEntity(dto);
+        return mapper.toDto(repository.save(entity));
     }
 
-    public void deleteById(Long id) {
+    @Transactional
+    public Optional<<%= entityName %>Dto> update(Long id, <%= entityName %>Dto dto) {
+        return repository.findById(id).map(existing -> {
+            mapper.updateEntityFromDto(dto, existing);
+            return mapper.toDto(repository.save(existing));
+        });
+    }
+
+    @Transactional
+    public boolean deleteById(Long id) {
+        if (!repository.existsById(id)) return false;
         repository.deleteById(id);
+        return true;
     }
 }

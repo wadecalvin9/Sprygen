@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -50,7 +51,7 @@ public class AdminController {
         }
 
         return userRepository.findById(id).map(user -> {
-            user.setRoles(Set.of(role));
+            user.setRoles(new HashSet<>(Set.of(role)));
             userRepository.save(user);
             return ResponseEntity.ok(Map.of("message", "Role updated to " + roleName));
         }).orElse(ResponseEntity.notFound().build());

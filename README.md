@@ -9,12 +9,13 @@ Sprygen is an interactive CLI written in TypeScript that scaffolds secure, struc
 
 ## ✨ Features
 
-- **Interactive Scaffolding:** Prompt-based setup for Java versions, build tools (Maven/Gradle), and databases (H2, MySQL, PostgreSQL).
-- **Built-in Security:** Choose between stateless JWT authentication for REST APIs or stateful Session-based authentication for traditional web apps.
-- **Role-Based Access Control:** Pre-configured `ROLE_ADMIN` and `ROLE_USER` entities with JPA integration.
-- **Optional Frontend:** Generate a pure `REST API` or a complete `Fullstack` application (including login, register, profile, and an admin dashboard).
-- **Entity Generator:** Scaffold JPA Entities, Repositories, Services, DTOs, and REST Controllers instantly from the command line.
-- **Ready-to-use Modules:** Instantly toggle Swagger UI, Spring Mail, and robust Logback configurations logging.
+- **Interactive Scaffolding:** Prompt-based setup for Java 17/21, Maven/Gradle, and databases (H2, MySQL, PostgreSQL).
+- **Built-in Security:** Stateless JWT authentication or stateful Session-based logins.
+- **Enterprise Architecture:** Compile-time safe mapping with **MapStruct**, auto-configured `Page<T>` pagination, and JPA `Specification` dynamic filtering out of the box.
+- **Database Migrations:** First-class **Flyway** support. Automatically scaffold migration directories and generate `.sql` migrations per entity.
+- **Role-Based Access Control & Auditing:** Pre-configured `ROLE_ADMIN` and `ROLE_USER` entities with JPA Auditing (`@CreatedBy`, `@LastModifiedDate`).
+- **Entity Generator:** Scaffold JPA Entities, Repositories, Services, Mappers, DTOs, and REST Controllers instantly.
+- **Batch Schema Generation:** Scaffold multiple interconnected entities at once using a declarative JSON schema.
 
 ## 🚀 Installation
 
@@ -44,32 +45,63 @@ sprygen new <project-name>
 - Project Type (REST API or Fullstack with UI)
 - Optional Modules (Swagger/OpenAPI, Mail, Logging)
 
-### 2. Generate a New Entity
+### 2. Generate a Single Entity
 
 Run this command **inside** your generated Sprygen project directory. It prompts you to define fields and automatically generates the entire persistence and REST API stack.
 
 ```bash
-sprygen add-entity <entity-name>
-# Example: sprygen add-entity Product
+sprygen add-entity <entity-name> # e.g. sprygen add-entity Product
 ```
 
 **Generated files include:**
-- JPA Entity Class (with fields defined via prompt)
-- Spring Data `JpaRepository`
-- Service Class
-- REST Controller (Standard CRUD endpoints)
-- DTO (Data Transfer Object)
-- Base Integration Test logic
+- JPA Entity Class (with fields defined via prompt, extends `AbstractAuditingEntity`)
+- Spring Data `JpaRepository` + `JpaSpecificationExecutor`
+- `EntitySpecification` (for dynamic query filtering)
+- Service Class (handling `Page<T>` mapping)
+- MapStruct `Mapper` Interface
+- REST Controller (Paginated standard CRUD endpoints)
+- Filter and Response DTOs
+- Flyway SQL Migration (if project uses Flyway)
 
-### 3. Inject Authentication
+### 3. Batch Generate Entities (`block-generate`)
 
-Useful for modifying existing projects. Scaffolds Sprygen's robust JWT authentication layer and Spring Security configurations into an already existing Spring Boot codebase.
+Perfect for initial project bootstrapping. Design your entire database in a `schema.json` file and generate all your entities and relations in one command.
+
+```json
+[
+  {
+    "name": "Product",
+    "fields": [
+      { "name": "title", "type": "String", "nullable": false }
+    ],
+    "relations": [
+      { "type": "ManyToOne", "target": "Category", "fieldName": "category", "eager": true }
+    ]
+  }
+]
+```
+
+```bash
+sprygen block-generate schema.json
+```
+
+### 4. Inject Authentication
+
+Useful for modifying existing non-Sprygen projects. Scaffolds robust JWT authentication layers into an already existing Spring Boot codebase.
 
 ```bash
 sprygen generate-auth
 ```
 
-### 4. Update Sprygen
+### 5. Convert to Flyway (`migrate:init`)
+
+Instantly convert an existing `ddl-auto: update` Spring Boot project into a Flyway versioned project. It creates the migration directory, generates `V1__baseline.sql`, patches `application.yml`, and tracks state so future `add-entity` commands automatically generate SQL schema deltas.
+
+```bash
+sprygen migrate:init
+```
+
+### 6. Update Sprygen
 
 Ensure you are always running the latest version with the newest features and bug fixes by using the built-in update command.
 

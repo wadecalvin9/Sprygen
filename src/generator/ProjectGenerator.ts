@@ -168,10 +168,63 @@ export class ProjectGenerator {
             <artifactId>thymeleaf-extras-springsecurity6</artifactId>
         </dependency>` : '';
 
+      const mapstructDep = `
+        <!-- MapStruct for DTO mapping -->
+        <dependency>
+            <groupId>org.mapstruct</groupId>
+            <artifactId>mapstruct</artifactId>
+            <version>1.6.3</version>
+        </dependency>`;
+
+      const flywayDep = options.flyway ? `
+        <!-- Flyway Database Migrations -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-mysql</artifactId>
+        </dependency>` : '';
+
       pomContent = pomContent.replace(
         '</dependencies>',
-        `${jwtDeps}${swaggerDep}${thymeleafSecDep}\n    </dependencies>`
+        `${jwtDeps}${swaggerDep}${thymeleafSecDep}${mapstructDep}${flywayDep}\n    </dependencies>`
       );
+      
+      // Inject MapStruct annotation processor into maven compiler plugin
+      const compilerPlugin = `
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>\${lombok.version}</version>
+                        </path>
+                        <path>
+                            <groupId>org.mapstruct</groupId>
+                            <artifactId>mapstruct-processor</artifactId>
+                            <version>1.6.3</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>`;
+            
+      if (pomContent.includes('<artifactId>maven-compiler-plugin</artifactId>')) {
+        pomContent = pomContent.replace(
+          / *<plugin>\s*<groupId>org\.apache\.maven\.plugins<\/groupId>\s*<artifactId>maven-compiler-plugin<\/artifactId>[\s\S]*?<\/plugin>/,
+          compilerPlugin
+        );
+      } else {
+        pomContent = pomContent.replace(
+          '</plugins>\n    </build>',
+          `${compilerPlugin}\n        </plugins>\n    </build>`
+        );
+      }
+
       await fs.writeFile(pomPath, pomContent, 'utf8');
 
     } else {
@@ -187,7 +240,15 @@ export class ProjectGenerator {
     runtimeOnly    'io.jsonwebtoken:jjwt-impl:0.11.5'
     runtimeOnly    'io.jsonwebtoken:jjwt-jackson:0.11.5'` : '';
 
-      const appendStr = `\ndependencies {${jwtStr}${swaggerStr}${thymeleafStr}\n}\n`;
+      const mapstructStr = `
+    implementation 'org.mapstruct:mapstruct:1.6.3'
+    annotationProcessor 'org.mapstruct:mapstruct-processor:1.6.3'`;
+    
+      const flywayStr = options.flyway ? `
+    implementation 'org.flywaydb:flyway-core'
+    implementation 'org.flywaydb:flyway-mysql'` : '';
+
+      const appendStr = `\ndependencies {${jwtStr}${swaggerStr}${thymeleafStr}${mapstructStr}${flywayStr}\n}\n`;
       await fs.appendFile(gradlePath, appendStr, 'utf8');
     }
   }
@@ -229,6 +290,7 @@ export class ProjectGenerator {
       dbConfig,
       outputDir,
       modules:           options.modules,
+      flyway:            options.flyway,
       year:              new Date().getFullYear(),
     };
   }
@@ -244,6 +306,8 @@ export class ProjectGenerator {
 
     // ── Always-generated files ───
     const files: Array<[string, string]> = [
+      ['entity/AbstractAuditingEntity.java','entity/AbstractAuditingEntity.java.ejs'],
+      ['config/AuditingConfig.java',        'config/AuditingConfig.java.ejs'],
       ['entity/User.java',                  'entity/User.java.ejs'],
       ['entity/Role.java',                  'entity/Role.java.ejs'],
       ['repository/UserRepository.java',    'repository/UserRepository.java.ejs'],
@@ -313,6 +377,22 @@ export class ProjectGenerator {
         path.join(tDir, 'logback-spring.xml.ejs'),
         ctx,
       );
+    }
+
+    if (options.flyway) {
+      const migrationDir = path.join(resourcesBase, 'db/migration');
+      await fs.ensureDir(migrationDir);
+      await writeGeneratedFile(
+        path.join(migrationDir, 'V1__init_schema.sql'),
+        path.join(tDir, 'db/migration/V1__init_schema.sql.ejs'),
+        ctx,
+      );
+      
+      // Persist meta.json for the cli
+      const outputDir = String(ctx.outputDir);
+      const metaPath = path.join(outputDir, '.sprygen/meta.json');
+      await fs.ensureDir(path.dirname(metaPath));
+      await fs.writeJson(metaPath, { migrationVersion: 1, flyway: true }, { spaces: 2 });
     }
   }
 

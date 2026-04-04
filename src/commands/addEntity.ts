@@ -94,6 +94,11 @@ export async function addEntityCommand(entityName: string): Promise<void> {
 
   const entityNamePascal = toPascalCase(entityName);
 
+  // Detect Flyway by looking for .sprygen/meta.json or db/migration folder
+  const flywayDetected =
+    (await fs.pathExists(path.join(projectDir, '.sprygen/meta.json'))) ||
+    (await fs.pathExists(path.join(projectDir, 'src/main/resources/db/migration')));
+
   const options: EntityOptions = {
     entityName: entityNamePascal,
     entityNameLower: entityName.toLowerCase(),
@@ -101,7 +106,9 @@ export async function addEntityCommand(entityName: string): Promise<void> {
     packageName: answers.packageName,
     packagePath: answers.packageName.replace(/\./g, '/'),
     fields,
+    relations: [], // Basic CLI prompt doesn't ask for relations yet
     projectDir,
+    flyway: flywayDetected,
   };
 
   const generator = new EntityGenerator();

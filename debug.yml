@@ -1,0 +1,39 @@
+spring:
+  application:
+    name: test
+  
+  datasource:
+    url: ${DB_URL:urrl}
+    username: ${DB_USER:r}
+    password: ${DB_PASS:p}
+    driver-class-name: drv
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:10}
+
+  jpa:
+    hibernate:
+      ddl-auto: ${DDL_AUTO:validate}
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+
+jwt:
+  secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970_UPDATE_ME_IN_PROD}
+  expiration: ${JWT_EXPIRATION:86400000} # 24h
+
+app:
+  cors:
+    allowed-origins: ${CORS_ORIGINS:http://localhost:3000,http://localhost:4200,http://localhost:5173}
+
+server:
+  port: 8080
+  error:
+    include-message: always

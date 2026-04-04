@@ -4,6 +4,8 @@ import { newCommand } from './commands/new';
 import { addEntityCommand } from './commands/addEntity';
 import { generateAuthCommand } from './commands/generateAuth';
 import { updateCommand } from './commands/update';
+import { blockGenerateCommand } from './commands/blockGenerate';
+import { migrateInitCommand } from './commands/migrateInit';
 
 const program = new Command();
 
@@ -40,6 +42,20 @@ program
   .description('Update Sprygen to the latest version')
   .action(() => {
     updateCommand();
+  });
+
+program
+  .command('block-generate <schema-file>')
+  .description('Scaffold multiple entities at once using a schema.json file')
+  .action(async (schemaFile: string) => {
+    await blockGenerateCommand(schemaFile);
+  });
+
+program
+  .command('migrate:init')
+  .description('Convert an existing project to use Flyway migrations instead of ddl-auto')
+  .action(async () => {
+    await migrateInitCommand();
   });
 
 // Setup parsing of the CLI args

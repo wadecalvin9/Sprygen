@@ -4,37 +4,66 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
-<%_ 
-  const hasLocalDate = fields.some(f => f.type === 'LocalDate');
+<%_
+  const hasLocalDate     = fields.some(f => f.type === 'LocalDate');
   const hasLocalDateTime = fields.some(f => f.type === 'LocalDateTime');
-
-  if (hasLocalDate) { _%>
+  const manyToOneRels    = (relations || []).filter(r => r.type === 'ManyToOne' || r.type === 'OneToOne');
+  const oneToManyRels    = (relations || []).filter(r => r.type === 'OneToMany');
+  const manyToManyRels   = (relations || []).filter(r => r.type === 'ManyToMany');
+  const hasAnyRel        = (relations || []).length > 0;
+_%>
+<%_ if (hasLocalDate) { _%>
 import java.time.LocalDate;
-<%_ }
-  if (hasLocalDateTime) { _%>
+<%_ } _%>
+<%_ if (hasLocalDateTime) { _%>
 import java.time.LocalDateTime;
+<%_ } _%>
+<%_ if (hasAnyRel) { _%>
+import java.util.List;
 <%_ } _%>
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@EqualsAndHashCode(callSuper = false)
 @Entity
 @Table(name = "<%= entityNameLower %>s")
-public class <%= entityName %> {
+public class <%= entityName %> extends AbstractAuditingEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-<%_ for (let i = 0; i < fields.length; i++) { 
-        let field = fields[i]; _%>
-    <%_ if (!field.nullable) { _%>
+<%_ for (const field of fields) { _%>
+<%_ if (!field.nullable) { _%>
     @Column(nullable = false)
-    <%_ } _%>
+<%_ } _%>
     private <%= field.type %> <%= field.name %>;
+
+<%_ } _%>
+<%_ for (const rel of manyToOneRels) { _%>
+    @<%= rel.type %>
+    @JoinColumn(name = "<%= rel.fieldName %>_id")
+    private <%= rel.target %> <%= rel.fieldName %>;
+
+<%_ } _%>
+<%_ for (const rel of oneToManyRels) { _%>
+    @OneToMany(mappedBy = "<%= entityNameLower %>", cascade = CascadeType.ALL, fetch = FetchType.<%= rel.eager ? 'EAGER' : 'LAZY' %>)
+    private List<<%= rel.target %>> <%= rel.fieldName %>s;
+
+<%_ } _%>
+<%_ for (const rel of manyToManyRels) { _%>
+    @ManyToMany
+    @JoinTable(
+        name = "<%= entityNameLower %>_<%= rel.target.toLowerCase() %>",
+        joinColumns = @JoinColumn(name = "<%= entityNameLower %>_id"),
+        inverseJoinColumns = @JoinColumn(name = "<%= rel.target.toLowerCase() %>_id")
+    )
+    private List<<%= rel.target %>> <%= rel.fieldName %>s;
 
 <%_ } _%>
 }

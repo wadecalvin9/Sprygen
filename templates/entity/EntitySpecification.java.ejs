@@ -1,0 +1,39 @@
+package <%= packageName %>.repository;
+
+import <%= packageName %>.dto.<%= entityName %>Filter;
+import <%= packageName %>.entity.<%= entityName %>;
+import jakarta.persistence.criteria.Predicate;
+import org.springframework.data.jpa.domain.Specification;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * JPA Specification builder for {@link <%= entityName %>}.
+ * Uses a single {@code build(filter)} method so the predicate list never explodes.
+ * Add a null-check for each field — if the filter field is null it is ignored.
+ */
+public class <%= entityName %>Specification {
+
+    private <%= entityName %>Specification() {}
+
+    public static Specification<<%= entityName %>> build(<%= entityName %>Filter filter) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+<%_ for (const field of fields) { _%>
+            // Filter by <%= field.name %>
+            if (filter.get<%= field.name.charAt(0).toUpperCase() + field.name.slice(1) %>() != null) {
+<%_ if (field.type === 'String') { _%>
+                predicates.add(cb.like(cb.lower(root.get("<%= field.name %>")),
+                        "%" + filter.get<%= field.name.charAt(0).toUpperCase() + field.name.slice(1) %>().toLowerCase() + "%"));
+<%_ } else { _%>
+                predicates.add(cb.equal(root.get("<%= field.name %>"), filter.get<%= field.name.charAt(0).toUpperCase() + field.name.slice(1) %>()));
+<%_ } _%>
+            }
+
+<%_ } _%>
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+    }
+}
