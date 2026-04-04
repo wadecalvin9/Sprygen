@@ -11,40 +11,40 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       # Setup .npmrc to let npm know we are using the npmjs registry
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          registry-url: 'https://registry.npmjs.org'
-          
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+
       - run: npm ci
       - run: npm run build
-      
+
   publish-npm:
     needs: build
     runs-on: ubuntu-latest
-    
+
     # Required for npm provenance
     permissions:
       contents: read
       id-token: write
-      
+
     # Use the npm environment if you configure one in GitHub
     environment: npm
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          registry-url: 'https://registry.npmjs.org'
-          
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+
       - run: npm ci
       - run: npm run build
-      
+
       # Publishes using the provenance flag for verified releases
-      - run: npm publish --provenance --access public
+      - run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
