@@ -236,6 +236,44 @@ body {
 .stat-value { font-size: 1.9rem; font-weight: 700; line-height: 1; font-family: 'JetBrains Mono', monospace; }
 .stat-sub   { font-size: 0.72rem; color: var(--text-muted); margin-top: 4px; }
 
+/* ---------- Info strip ---------- */
+.info-strip {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 12px 18px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+.info-strip-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.info-strip-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-dim);
+}
+.info-strip-value {
+  font-size: 0.84rem;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+.info-strip-sep {
+  width: 1px;
+  height: 16px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+
 /* ---------- Tables ---------- */
 .table-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; }

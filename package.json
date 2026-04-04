@@ -1,7 +1,7 @@
 {
   "name": "sprygen",
   "version": "1.0.0",
-  "description": "A JHipster-like Spring Boot project generator CLI written in TypeScript",
+  "description": "A production-ready Spring Boot project generator CLI. Scaffold secure, structured Java applications with built-in JWT or session authentication, role-based access control, user management, and an optional fullstack frontend — all from a single interactive command.",
   "main": "dist/cli.js",
   "bin": {
     "sprygen": "./dist/cli.js"
@@ -40,10 +40,13 @@
     "spring-boot",
     "generator",
     "scaffold",
-    "jhipster",
+    "cli",
     "java",
     "jwt",
-    "cli"
+    "authentication",
+    "spring-security",
+    "fullstack",
+    "starter-kit"
   ],
   "author": "Sprygen",
   "license": "MIT",

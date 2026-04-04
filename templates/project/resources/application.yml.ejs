@@ -9,13 +9,22 @@ spring:
     driver-class-name: <%= dbDriverClass %>
 
   jpa:
+<%_ if (dbConfig.dialect) { _%>
     database-platform: <%= dbConfig.dialect %>
+<%_ } _%>
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
         format_sql: true
+<%_ if (database === 'h2') { _%>
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+<%_ } _%>
 
 <%_ if (hasMail) { _%>
   mail:
@@ -33,7 +42,7 @@ spring:
 
 jwt:
   secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
-  expiration: ${JWT_EXPIRATION:86400000} # 1 day in ms
+  expiration: ${JWT_EXPIRATION:86400000} # 24h
 
 server:
   port: 8080

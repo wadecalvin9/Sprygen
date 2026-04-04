@@ -21,24 +21,32 @@
         <p class="text-muted">Account overview and API reference.</p>
       </div>
 
-      <!-- Stats -->
-      <div class="stats-row" id="stats-row">
+      <!-- User info strip (role + email) -->
+      <div class="info-strip">
+        <div class="info-strip-item">
+          <span class="info-strip-label">Signed in as</span>
+          <span class="info-strip-value" id="strip-email"></span>
+        </div>
+        <div class="info-strip-sep"></div>
+        <div class="info-strip-item">
+          <span class="info-strip-label">Role</span>
+          <span id="strip-role-badge"></span>
+        </div>
+      </div>
+
+      <!-- Admin numeric stats (only visible to admins) -->
+      <div class="stats-row admin-zone hidden">
         <div class="stat-card">
-          <div class="stat-label">Role</div>
-          <div class="stat-value text-green" id="stat-role">—</div>
-        </div>
-        <div class="stat-card admin-zone hidden">
           <div class="stat-label">Total Users</div>
-          <div class="stat-value" id="stat-total">0</div>
-          <div class="stat-sub" id="stat-sub-total"></div>
+          <div class="stat-value text-green" id="stat-total">—</div>
         </div>
-        <div class="stat-card admin-zone hidden">
-          <div class="stat-label">Admins</div>
-          <div class="stat-value" id="stat-admins">0</div>
+        <div class="stat-card">
+          <div class="stat-label">Administrators</div>
+          <div class="stat-value" id="stat-admins">—</div>
         </div>
-        <div class="stat-card admin-zone hidden">
+        <div class="stat-card">
           <div class="stat-label">Members</div>
-          <div class="stat-value" id="stat-members">0</div>
+          <div class="stat-value" id="stat-members">—</div>
         </div>
       </div>
 
@@ -83,9 +91,15 @@
     new Date().toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
   document.getElementById('welcome-msg').textContent =
     'Welcome back, ' + user.firstName;
-  document.getElementById('stat-role').textContent =
-    Auth.isAdmin() ? 'Administrator' : 'Member';
 
+  // Info strip — role as badge, email as text
+  document.getElementById('strip-email').textContent = user.email;
+  const badge = document.getElementById('strip-role-badge');
+  badge.innerHTML = Auth.isAdmin()
+    ? '<span class="badge badge-admin">Administrator</span>'
+    : '<span class="badge badge-auth">Member</span>';
+
+  // Admin-only: show stat cards + fetch live counts
   if (Auth.isAdmin()) {
     document.querySelectorAll('.admin-zone').forEach(el => el.classList.remove('hidden'));
 

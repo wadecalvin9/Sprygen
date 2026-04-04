@@ -413,10 +413,10 @@ export class ProjectGenerator {
     switch (db) {
       case 'mysql':
         return {
-          url:      `jdbc:mysql://localhost:3306/${artifactId}?useSSL=false&serverTimezone=UTC`,
+          url:      `jdbc:mysql://localhost:3306/${artifactId}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true`,
           username: 'root',
           password: 'YOUR_PASSWORD',
-          dialect:  'org.hibernate.dialect.MySQL8Dialect',
+          dialect:  'org.hibernate.dialect.MySQLDialect',
         };
       case 'postgresql':
         return {
@@ -425,9 +425,9 @@ export class ProjectGenerator {
           password: 'YOUR_PASSWORD',
           dialect:  'org.hibernate.dialect.PostgreSQLDialect',
         };
-      default:
+      default: // h2
         return {
-          url:      `jdbc:h2:mem:${artifactId};MODE=MySQL`,
+          url:      `jdbc:h2:mem:${artifactId}`,
           username: 'sa',
           password: '',
           dialect:  'org.hibernate.dialect.H2Dialect',
