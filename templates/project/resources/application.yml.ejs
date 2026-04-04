@@ -3,17 +3,19 @@ spring:
     name: <%= projectName %>
   
   datasource:
-    url: ${DB_URL:<%= dbConfig.url %>}
-    username: ${DB_USER:<%= dbConfig.username %>}
-    password: ${DB_PASS:<%= dbConfig.password %>}
-    driver-class-name: <%= dbDriverClass %>
+    url: ${DB_URL:<%- dbConfig.url %>}
+    username: ${DB_USER:<%- dbConfig.username %>}
+    password: ${DB_PASS:<%- dbConfig.password %>}
+    driver-class-name: <%- dbDriverClass %>
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:10}
 
   jpa:
-<%_ if (dbConfig.dialect) { _%>
-    database-platform: <%= dbConfig.dialect %>
-<%_ } _%>
+  <%_ if (dbConfig.dialect) { _%>
+    database-platform: <%- dbConfig.dialect %>
+  <%_ } _%>
     hibernate:
-      ddl-auto: update
+      ddl-auto: ${DDL_AUTO:update}
     show-sql: false
     properties:
       hibernate:
@@ -30,8 +32,8 @@ spring:
   mail:
     host: ${MAIL_HOST:smtp.mailtrap.io}
     port: ${MAIL_PORT:2525}
-    username: ${MAIL_USER:your_username}
-    password: ${MAIL_PASS:your_password}
+    username: ${MAIL_USER:}
+    password: ${MAIL_PASS:}
     properties:
       mail:
         smtp:
@@ -41,8 +43,12 @@ spring:
 <%_ } _%>
 
 jwt:
-  secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+  secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970_UPDATE_ME_IN_PROD}
   expiration: ${JWT_EXPIRATION:86400000} # 24h
+
+app:
+  cors:
+    allowed-origins: ${CORS_ORIGINS:http://localhost:3000,http://localhost:4200,http://localhost:5173}
 
 server:
   port: 8080
