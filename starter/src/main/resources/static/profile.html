@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Starter — Profile</title>
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body>
+<div class="app-shell">
+  <aside id="sidebar" class="sidebar"></aside>
+  <div class="main">
+    <header class="topbar">
+      <span class="topbar-title">Profile</span>
+    </header>
+    <div class="page">
+
+      <div class="profile-hero" id="profile-hero">
+        <div class="avatar avatar-lg" id="hero-avatar"></div>
+        <div>
+          <h2 id="hero-name"></h2>
+          <p class="text-muted" id="hero-email"></p>
+          <span id="hero-badge" class="badge" style="margin-top:6px;display:inline-block;"></span>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <!-- Personal info -->
+        <div class="card">
+          <div class="card-header"><span class="card-title">Personal information</span></div>
+          <div class="card-body">
+            <div id="profile-alert" class="alert"></div>
+            <form id="profile-form">
+              <div class="row-2">
+                <div class="form-group">
+                  <label>First name</label>
+                  <input id="pf-first" type="text"/>
+                </div>
+                <div class="form-group">
+                  <label>Last name</label>
+                  <input id="pf-last" type="text"/>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Bio</label>
+                <textarea id="pf-bio" rows="3" placeholder="A short bio…"></textarea>
+              </div>
+              <div class="form-group">
+                <label>Avatar URL</label>
+                <input id="pf-avatar" type="url" placeholder="https://…"/>
+              </div>
+              <button type="submit" class="btn btn-primary" id="save-btn">Save changes</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Change password -->
+        <div class="card">
+          <div class="card-header"><span class="card-title">Change password</span></div>
+          <div class="card-body">
+            <div id="pw-alert" class="alert"></div>
+            <form id="password-form">
+              <div class="form-group">
+                <label>Current password</label>
+                <input id="pw-current" type="password" placeholder="••••••••"/>
+              </div>
+              <div class="form-group">
+                <label>New password</label>
+                <input id="pw-new" type="password" placeholder="••••••••"/>
+              </div>
+              <div class="form-group">
+                <label>Confirm new password</label>
+                <input id="pw-confirm" type="password" placeholder="••••••••"/>
+              </div>
+              <button type="submit" class="btn btn-primary" id="pw-btn">Update password</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="toast" class="toast"></div>
+<script src="/js/auth.js"></script>
+<script src="/js/ui.js"></script>
+<script src="/js/nav.js"></script>
+<script>
+  if (!guardAuth()) throw new Error('redirect');
+  renderNav('profile');
+
+  async function loadProfile() {
+    const res = await fetch('/api/v1/profile', {
+      headers: { Authorization: 'Bearer ' + Auth.token() }
+    });
+    if (!res.ok) { showToast('Failed to load profile', 'error'); return; }
+    const u = await res.json();
+
+    const initials = ((u.firstName?.[0]||'') + (u.lastName?.[0]||'')).toUpperCase();
+    document.getElementById('hero-avatar').textContent = initials;
+    document.getElementById('hero-name').textContent   = u.firstName + ' ' + u.lastName;
+    document.getElementById('hero-email').textContent  = u.email;
+
+    const isAdmin = u.roles?.includes('ROLE_ADMIN');
+    const badge   = document.getElementById('hero-badge');
+    badge.textContent = isAdmin ? 'Administrator' : 'Member';
+    badge.className   = 'badge ' + (isAdmin ? 'badge-admin' : 'badge-auth');
+
+    document.getElementById('pf-first').value  = u.firstName || '';
+    document.getElementById('pf-last').value   = u.lastName  || '';
+    document.getElementById('pf-bio').value    = u.bio       || '';
+    document.getElementById('pf-avatar').value = u.avatarUrl || '';
+  }
+
+  document.getElementById('profile-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    clearAlert('profile-alert');
+    const btn = document.getElementById('save-btn');
+    setBusy(btn, true, 'Saving…');
+    try {
+      await fetch('/api/v1/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type':'application/json', Authorization: 'Bearer ' + Auth.token() },
+        body: JSON.stringify({
+          firstName: document.getElementById('pf-first').value,
+          lastName:  document.getElementById('pf-last').value,
+          bio:       document.getElementById('pf-bio').value,
+          avatarUrl: document.getElementById('pf-avatar').value,
+        })
+      });
+      showToast('Profile updated');
+      loadProfile();
+    } catch(err) {
+      showAlert('profile-alert', err.message);
+    } finally { setBusy(btn, false); }
+  });
+
+  document.getElementById('password-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    clearAlert('pw-alert');
+    const newPw   = document.getElementById('pw-new').value;
+    const confirm = document.getElementById('pw-confirm').value;
+    if (newPw !== confirm) { showAlert('pw-alert', 'Passwords do not match.'); return; }
+    const btn = document.getElementById('pw-btn');
+    setBusy(btn, true, 'Updating…');
+    try {
+      const res = await fetch('/api/v1/profile/password', {
+        method: 'PUT',
+        headers: { 'Content-Type':'application/json', Authorization: 'Bearer ' + Auth.token() },
+        body: JSON.stringify({ currentPassword: document.getElementById('pw-current').value, newPassword: newPw })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed');
+      document.getElementById('password-form').reset();
+      showToast('Password changed');
+    } catch(err) {
+      showAlert('pw-alert', err.message);
+    } finally { setBusy(btn, false); }
+  });
+
+  loadProfile();
+</script>
+</body>
+</html>
+

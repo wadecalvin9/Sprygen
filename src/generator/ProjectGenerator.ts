@@ -333,47 +333,66 @@ export class ProjectGenerator {
       await fs.ensureDir(path.join(targetDir, 'admin'));
 
       const pages: Array<[string, string]> = [
-        ['login.html',         'login.html.ejs'],
-        ['register.html',      'register.html.ejs'],
-        ['dashboard.html',     'dashboard.html.ejs'],
-        ['profile.html',       'profile.html.ejs'],
-        ['admin/users.html',   'admin/users.html.ejs'],
+        ['login.html',       'login.html.ejs'],
+        ['register.html',    'register.html.ejs'],
+        ['dashboard.html',   'dashboard.html.ejs'],
+        ['profile.html',     'profile.html.ejs'],
+        ['admin/users.html', 'admin/users.html.ejs'],
       ];
       for (const [out, tpl] of pages) {
         await writeGeneratedFile(path.join(targetDir, out), path.join(tDir, tpl), ctx);
       }
 
-      // Shared CSS → static/assets/
-      const cssDir = path.join(outputDir, 'src/main/resources/static/assets');
+      // CSS → static/css/
+      const cssDir = path.join(outputDir, 'src/main/resources/static/css');
       await fs.ensureDir(cssDir);
       await fs.copyFile(
-        path.join(this.templatesDir, 'static/assets/style.css'),
+        path.join(this.templatesDir, 'static/css/style.css'),
         path.join(cssDir, 'style.css'),
       );
     } else {
-      // ── JWT + Static SPA ────────────────────────────────────
+      // ── JWT + Static multi-page ─────────────────────────────
       const tDir      = path.join(this.templatesDir, 'static');
       const targetDir = path.join(outputDir, 'src/main/resources/static');
-      await fs.ensureDir(path.join(targetDir, 'assets'));
 
-      // index.html (EJS rendered with project context)
+      await fs.ensureDir(path.join(targetDir, 'css'));
+      await fs.ensureDir(path.join(targetDir, 'js'));
+
+      // HTML pages (EJS-rendered with project context)
+      const pages: Array<[string, string]> = [
+        ['index.html',     'index.html.ejs'],
+        ['login.html',     'login.html.ejs'],
+        ['register.html',  'register.html.ejs'],
+        ['dashboard.html', 'dashboard.html.ejs'],
+        ['profile.html',   'profile.html.ejs'],
+        ['admin.html',     'admin.html.ejs'],
+      ];
+      for (const [out, tpl] of pages) {
+        const tplPath = path.join(tDir, tpl);
+        if (await fs.pathExists(tplPath)) {
+          await writeGeneratedFile(path.join(targetDir, out), tplPath, ctx);
+        }
+      }
+
+      // JS — nav.js rendered (has projectName), auth.js and ui.js are plain copies
       await writeGeneratedFile(
-        path.join(targetDir, 'index.html'),
-        path.join(tDir, 'index.html.ejs'),
+        path.join(targetDir, 'js/nav.js'),
+        path.join(tDir, 'js/nav.js.ejs'),
         ctx,
       );
-
-      // app.js (EJS rendered — contains projectName)
-      await writeGeneratedFile(
-        path.join(targetDir, 'assets/app.js'),
-        path.join(tDir, 'assets/app.js.ejs'),
-        ctx,
-      );
-
-      // style.css (plain copy)
       await fs.copyFile(
-        path.join(tDir, 'assets/style.css'),
-        path.join(targetDir, 'assets/style.css'),
+        path.join(tDir, 'js/auth.js'),
+        path.join(targetDir, 'js/auth.js'),
+      );
+      await fs.copyFile(
+        path.join(tDir, 'js/ui.js'),
+        path.join(targetDir, 'js/ui.js'),
+      );
+
+      // CSS — plain copy
+      await fs.copyFile(
+        path.join(tDir, 'css/style.css'),
+        path.join(targetDir, 'css/style.css'),
       );
     }
   }

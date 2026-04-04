@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sign in — Starter</title>
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body class="auth-body">
+<div class="auth-wrap">
+  <div class="auth-card">
+    <div class="auth-header">
+      <div class="brand-mark-lg">SG</div>
+      <h1>Starter</h1>
+      <p class="text-muted">Sign in to your account</p>
+    </div>
+
+    <div id="login-alert" class="alert"></div>
+
+    <form id="login-form">
+      <div class="form-group">
+        <label for="email">Email address</label>
+        <input id="email" type="email" placeholder="you@example.com" required autocomplete="email"/>
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input id="password" type="password" placeholder="••••••••" required autocomplete="current-password"/>
+      </div>
+      <button type="submit" id="submit-btn" class="btn btn-primary btn-full">Sign in</button>
+    </form>
+
+    <p class="auth-switch">
+      New here? <a href="/register.html">Create an account</a>
+    </p>
+    <p class="auth-switch">
+      <a href="/" class="text-dim">← Back to home</a>
+    </p>
+  </div>
+</div>
+<script src="/js/auth.js"></script>
+<script src="/js/ui.js"></script>
+<script>
+  // Redirect if already logged in
+  if (Auth.loggedIn()) window.location.href = '/dashboard.html';
+
+  document.getElementById('login-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    clearAlert('login-alert');
+    const btn = document.getElementById('submit-btn');
+    setBusy(btn, true, 'Signing in…');
+    try {
+      const res = await fetch('/api/v1/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email:    document.getElementById('email').value,
+          password: document.getElementById('password').value,
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Invalid credentials');
+      Auth.save(data);
+      window.location.href = '/dashboard.html';
+    } catch (err) {
+      showAlert('login-alert', err.message);
+      setBusy(btn, false);
+    }
+  });
+</script>
+</body>
+</html>
+

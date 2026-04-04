@@ -127,8 +127,12 @@ export async function newCommand(projectName: string): Promise<void> {
 
   const generator = new ProjectGenerator();
   try {
+    printSection(`Generating  ${projectName}`);
+    console.log();
     await generator.generate(options);
+    logger.done();
   } catch (err: unknown) {
+    console.log();
     if (err instanceof Error) {
       logger.error(err.message);
     } else {

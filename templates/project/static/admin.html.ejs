@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title><%= projectName %> — Admin Panel</title>
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body>
+<div class="app-shell">
+  <aside id="sidebar" class="sidebar"></aside>
+  <div class="main">
+    <header class="topbar">
+      <span class="topbar-title">User Management</span>
+      <span id="user-count" class="topbar-meta"></span>
+    </header>
+    <div class="page">
+      <div class="page-header">
+        <h1>Users</h1>
+        <p class="text-muted">Manage roles and access for all registered users.</p>
+      </div>
+
+      <!-- Quick stats -->
+      <div class="stats-row" id="admin-stats">
+        <div class="stat-card">
+          <div class="stat-label">Total Users</div>
+          <div class="stat-value text-green" id="a-stat-total">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Administrators</div>
+          <div class="stat-value" id="a-stat-admins">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Members</div>
+          <div class="stat-value" id="a-stat-members">—</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">All users</span>
+          <button class="btn btn-ghost btn-sm" onclick="loadUsers()">Refresh</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>#</th><th>Name</th><th>Email</th><th>Role</th><th>Joined</th><th>Actions</th></tr>
+            </thead>
+            <tbody id="users-table">
+              <tr><td colspan="6" class="table-empty">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="toast" class="toast"></div>
+<script src="/js/auth.js"></script>
+<script src="/js/ui.js"></script>
+<script src="/js/nav.js"></script>
+<script>
+  if (!guardAdmin()) throw new Error('redirect');
+  renderNav('admin');
+
+  async function loadStats() {
+    try {
+      const r = await fetch('/api/v1/admin/stats', {
+        headers: { Authorization: 'Bearer ' + Auth.token() }
+      });
+      if (!r.ok) throw new Error();
+      const s = await r.json();
+      animateCount(document.getElementById('a-stat-total'),   s.totalUsers   || 0);
+      animateCount(document.getElementById('a-stat-admins'),  s.admins       || 0);
+      animateCount(document.getElementById('a-stat-members'), s.regularUsers || 0);
+    } catch { /* silent, stats are bonus */ }
+  }
+
+  async function loadUsers() {
+    const tbody = document.getElementById('users-table');
+    tbody.innerHTML = '<tr><td colspan="6" class="table-empty">Loading…</td></tr>';
+    try {
+      const r = await fetch('/api/v1/admin/users', {
+        headers: { Authorization: 'Bearer ' + Auth.token() }
+      });
+      if (!r.ok) throw new Error('Access denied (' + r.status + ')');
+      const users = await r.json();
+
+      document.getElementById('user-count').textContent = users.length + ' users';
+
+      if (!users.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="table-empty">No users found.</td></tr>';
+        return;
+      }
+
+      const meId = Auth.user()?.id;
+
+      tbody.innerHTML = users.map(u => {
+        const isAdmin  = u.roles?.includes('ROLE_ADMIN') || u.admin;
+        const joined   = u.createdAt
+          ? new Date(u.createdAt).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' })
+          : '—';
+        const isSelf   = u.id === meId;
+        const newRole  = isAdmin ? 'ROLE_USER' : 'ROLE_ADMIN';
+        const roleLabel = isAdmin ? 'Make Member' : 'Make Admin';
+        const roleBadge = isAdmin
+          ? '<span class="badge badge-admin">Admin</span>'
+          : '<span class="badge badge-auth">Member</span>';
+
+        const actions = isSelf
+          ? '<span class="text-muted" style="font-size:0.78rem;">— you —</span>'
+          : `<div class="actions">
+               <button class="btn btn-ghost btn-xs" onclick="changeRole(${u.id},'${newRole}')">${roleLabel}</button>
+               <button class="btn btn-danger-ghost btn-xs" onclick="deleteUser(${u.id},'${u.firstName}')">Delete</button>
+             </div>`;
+
+        return `<tr>
+          <td class="text-dim">${u.id}</td>
+          <td><strong>${u.firstName} ${u.lastName}</strong></td>
+          <td class="text-muted">${u.email}</td>
+          <td>${roleBadge}</td>
+          <td class="text-muted">${joined}</td>
+          <td>${actions}</td>
+        </tr>`;
+      }).join('');
+    } catch (err) {
+      tbody.innerHTML = `<tr><td colspan="6" class="table-empty text-danger">${err.message}</td></tr>`;
+    }
+  }
+
+  async function changeRole(id, role) {
+    try {
+      const r = await fetch('/api/v1/admin/users/' + id + '/role', {
+        method: 'PUT',
+        headers: { 'Content-Type':'application/json', Authorization: 'Bearer ' + Auth.token() },
+        body: JSON.stringify({ role })
+      });
+      if (!r.ok) throw new Error('Failed to update role');
+      showToast('Role updated');
+      loadUsers();
+      loadStats();
+    } catch (err) { showToast(err.message, 'error'); }
+  }
+
+  async function deleteUser(id, name) {
+    if (!confirm('Delete "' + name + '"? This cannot be undone.')) return;
+    try {
+      const r = await fetch('/api/v1/admin/users/' + id, {
+        method: 'DELETE',
+        headers: { Authorization: 'Bearer ' + Auth.token() }
+      });
+      if (!r.ok) throw new Error('Delete failed');
+      showToast(name + ' deleted');
+      loadUsers();
+      loadStats();
+    } catch (err) { showToast(err.message, 'error'); }
+  }
+
+  loadStats();
+  loadUsers();
+</script>
+</body>
+</html>

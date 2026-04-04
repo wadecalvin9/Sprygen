@@ -37,6 +37,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/auth/**").permitAll()
                 // Public home / static assets
                 .requestMatchers("/", "/index.html", "/login.html", "/register.html").permitAll()
+                .requestMatchers("/dashboard.html", "/profile.html", "/admin.html").permitAll()
                 .requestMatchers("/assets/**", "/css/**", "/js/**", "/favicon.ico").permitAll()
                 .requestMatchers("/actuator/**").permitAll()
                 // Admin endpoints — ROLE_ADMIN enforced via @PreAuthorize too

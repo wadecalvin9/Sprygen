@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title><%= projectName %> — Dashboard</title>
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body>
+<div class="app-shell">
+  <aside id="sidebar" class="sidebar"></aside>
+  <div class="main">
+    <header class="topbar">
+      <span class="topbar-title">Dashboard</span>
+      <span id="topbar-date" class="topbar-meta"></span>
+    </header>
+
+    <div class="page">
+      <div class="page-header">
+        <h1 id="welcome-msg">Welcome back</h1>
+        <p class="text-muted">Account overview and API reference.</p>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-row" id="stats-row">
+        <div class="stat-card">
+          <div class="stat-label">Role</div>
+          <div class="stat-value text-green" id="stat-role">—</div>
+        </div>
+        <div class="stat-card admin-zone hidden">
+          <div class="stat-label">Total Users</div>
+          <div class="stat-value" id="stat-total">0</div>
+          <div class="stat-sub" id="stat-sub-total"></div>
+        </div>
+        <div class="stat-card admin-zone hidden">
+          <div class="stat-label">Admins</div>
+          <div class="stat-value" id="stat-admins">0</div>
+        </div>
+        <div class="stat-card admin-zone hidden">
+          <div class="stat-label">Members</div>
+          <div class="stat-value" id="stat-members">0</div>
+        </div>
+      </div>
+
+      <!-- API Reference -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">API Reference</span>
+          <a href="/swagger-ui/index.html" target="_blank" class="link-green">Swagger UI &rarr;</a>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Method</th><th>Endpoint</th><th>Description</th><th>Access</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code class="http-post">POST</code></td><td><code>/api/v1/auth/register</code></td><td>Register account</td><td><span class="badge badge-open">Public</span></td></tr>
+              <tr><td><code class="http-post">POST</code></td><td><code>/api/v1/auth/login</code></td><td>Login, get token</td><td><span class="badge badge-open">Public</span></td></tr>
+              <tr><td><code class="http-get">GET</code></td><td><code>/api/v1/profile</code></td><td>Get own profile</td><td><span class="badge badge-auth">Auth</span></td></tr>
+              <tr><td><code class="http-put">PUT</code></td><td><code>/api/v1/profile</code></td><td>Update profile</td><td><span class="badge badge-auth">Auth</span></td></tr>
+              <tr><td><code class="http-put">PUT</code></td><td><code>/api/v1/profile/password</code></td><td>Change password</td><td><span class="badge badge-auth">Auth</span></td></tr>
+              <tr><td><code class="http-get">GET</code></td><td><code>/api/v1/admin/users</code></td><td>List all users</td><td><span class="badge badge-admin">Admin</span></td></tr>
+              <tr><td><code class="http-put">PUT</code></td><td><code>/api/v1/admin/users/{id}/role</code></td><td>Assign role</td><td><span class="badge badge-admin">Admin</span></td></tr>
+              <tr><td><code class="http-delete">DELETE</code></td><td><code>/api/v1/admin/users/{id}</code></td><td>Delete user</td><td><span class="badge badge-admin">Admin</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="toast" class="toast"></div>
+<script src="/js/auth.js"></script>
+<script src="/js/ui.js"></script>
+<script src="/js/nav.js"></script>
+<script>
+  if (!guardAuth()) throw new Error('redirect');
+
+  const user = Auth.user();
+  renderNav('dashboard');
+
+  document.getElementById('topbar-date').textContent =
+    new Date().toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
+  document.getElementById('welcome-msg').textContent =
+    'Welcome back, ' + user.firstName;
+  document.getElementById('stat-role').textContent =
+    Auth.isAdmin() ? 'Administrator' : 'Member';
+
+  if (Auth.isAdmin()) {
+    document.querySelectorAll('.admin-zone').forEach(el => el.classList.remove('hidden'));
+
+    fetch('/api/v1/admin/stats', {
+      headers: { Authorization: 'Bearer ' + Auth.token() }
+    })
+    .then(r => r.json())
+    .then(stats => {
+      animateCount(document.getElementById('stat-total'),   stats.totalUsers   || 0);
+      animateCount(document.getElementById('stat-admins'),  stats.admins       || 0);
+      animateCount(document.getElementById('stat-members'), stats.regularUsers || 0);
+    })
+    .catch(() => showToast('Could not load stats', 'error'));
+  }
+</script>
+</body>
+</html>

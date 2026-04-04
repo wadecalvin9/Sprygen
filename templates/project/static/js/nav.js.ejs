@@ -1,0 +1,82 @@
+/* ================================================================
+   nav.js — Sidebar + topbar component
+   ================================================================ */
+
+function renderNav(activePage) {
+  const user    = Auth.user();
+  const isAdmin = Auth.isAdmin();
+
+  const adminSection = isAdmin ? `
+    <li class="nav-section-label">Administration</li>
+    <li>
+      <a class="nav-link ${activePage === 'admin' ? 'active' : ''}"
+         href="/admin.html">
+        <span class="nav-icon">A</span> Admin Panel
+        <span class="nav-badge">ADMIN</span>
+      </a>
+    </li>` : '';
+
+  document.getElementById('sidebar').innerHTML = `
+    <div class="sidebar-brand">
+      <span class="brand-mark">SG</span>
+      <span class="brand-name"><%= projectName %></span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <ul>
+        <li class="nav-section-label">Menu</li>
+        <li>
+          <a class="nav-link ${activePage === 'dashboard' ? 'active' : ''}"
+             href="/dashboard.html">
+            <span class="nav-icon">D</span> Dashboard
+          </a>
+        </li>
+        <li>
+          <a class="nav-link ${activePage === 'profile' ? 'active' : ''}"
+             href="/profile.html">
+            <span class="nav-icon">P</span> Profile
+          </a>
+        </li>
+        ${adminSection}
+      </ul>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="user-chip">
+        <div class="avatar">${Auth.initials()}</div>
+        <div class="user-chip-info">
+          <div class="user-chip-name">${Auth.fullName()}</div>
+          <div class="user-chip-role">${isAdmin ? 'Administrator' : 'Member'}</div>
+        </div>
+      </div>
+      <button class="btn btn-ghost btn-sm btn-full" onclick="doLogout()">Sign out</button>
+    </div>
+  `;
+}
+
+function doLogout() {
+  Auth.clear();
+  window.location.href = '/';
+}
+
+function guardAuth() {
+  if (!Auth.loggedIn()) {
+    window.location.href = '/login.html';
+    return false;
+  }
+  return true;
+}
+
+function guardAdmin() {
+  if (!guardAuth()) return false;
+  if (!Auth.isAdmin()) {
+    window.location.href = '/dashboard.html';
+    return false;
+  }
+  return true;
+}
+
+window.renderNav  = renderNav;
+window.doLogout   = doLogout;
+window.guardAuth  = guardAuth;
+window.guardAdmin = guardAdmin;

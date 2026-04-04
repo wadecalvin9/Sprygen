@@ -1,68 +1,63 @@
 package <%= packageName %>.controller;
 
 import lombok.RequiredArgsConstructor;
-<%_ if (isJwtAuth && isFullstack) { _%>
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.io.Resource;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+<%_ if (isFullstack && isJwtAuth) { _%>
+import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
-<%_ } else if (!isFullstack) { _%>
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
-import java.util.Map;
-import java.time.LocalDateTime;
-<%_ } _%>
 
-<%_ if (!isFullstack) { _%>
+@Controller
+@RequiredArgsConstructor
+public class HomeController {
+
+    /** Serve the landing page */
+    @GetMapping("/")
+    public String home() {
+        return "forward:/index.html";
+    }
+
+    /** Each page is standalone — just permit static file serving */
+    @GetMapping({"/login", "/register"})
+    public String authPages() {
+        return "forward:/index.html";
+    }
+}
+<%_ } else if (isFullstack && isSessionAuth) { _%>
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+
+@Controller
+@RequiredArgsConstructor
+public class HomeController {
+
+    @GetMapping("/")
+    public String home() {
+        return "redirect:/dashboard";
+    }
+}
+<%_ } else { _%>
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 @RestController
 @RequiredArgsConstructor
 public class HomeController {
 
     @GetMapping("/")
     public ResponseEntity<Map<String, Object>> home() {
-        return ResponseEntity.ok(Map.of(
-            "status",  "UP",
-            "app",     "<%= projectName %>",
-            "version", "1.0.0",
-            "docs",    "/swagger-ui/index.html",
-            "health",  "/actuator/health",
-            "time",    LocalDateTime.now().toString()
-        ));
-    }
-}
-<%_ } else if (isJwtAuth) { _%>
-import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
-
-@Controller
-@RequiredArgsConstructor
-public class HomeController {
-
-    @GetMapping("/")
-    public String index() {
-        return "forward:/index.html";
-    }
-
-    @GetMapping({"/login", "/register", "/dashboard", "/profile", "/admin"})
-    public String spa() {
-        // All SPA routes → index.html (client-side router handles them)
-        return "forward:/index.html";
-    }
-}
-<%_ } else { _%>
-import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
-
-@Controller
-@RequiredArgsConstructor
-public class HomeController {
-
-    @GetMapping("/")
-    public String index() {
-        return "redirect:/dashboard";
+        Map<String, Object> info = new LinkedHashMap<>();
+        info.put("status",  "UP");
+        info.put("app",     "<%= projectName %>");
+        info.put("version", "1.0.0");
+        info.put("auth",    "JWT");
+        info.put("docs",    "/swagger-ui/index.html");
+        info.put("health",  "/actuator/health");
+        info.put("time",    LocalDateTime.now().toString());
+        return ResponseEntity.ok(info);
     }
 }
 <%_ } _%>

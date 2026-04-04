@@ -15,6 +15,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashSet;
 import java.util.Set;
 
 @RestController
@@ -36,8 +37,8 @@ public class AuthController {
         // First registered user becomes ADMIN, everyone else is USER
         boolean isFirstUser = userRepository.count() == 0;
         Set<Role> roles = isFirstUser
-                ? Set.of(Role.ROLE_ADMIN, Role.ROLE_USER)
-                : Set.of(Role.ROLE_USER);
+                ? new HashSet<>(Set.of(Role.ROLE_ADMIN, Role.ROLE_USER))
+                : new HashSet<>(Set.of(Role.ROLE_USER));
 
         var user = User.builder()
                 .firstName(request.getFirstName())
