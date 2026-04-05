@@ -16,7 +16,8 @@ Sprygen goes beyond basic scaffolding. It generates clean, layered architectures
 ## ✨ Features
 
 - **Interactive Scaffolding:** Prompt-based setup for Java 17/21, Maven/Gradle, and databases (H2, MySQL, PostgreSQL).
-- **Built-in Security:** Stateless JWT authentication or stateful Session-based logins.
+- **Fullstack Monorepo Support:** Generate a complete monorepo with a Spring Boot backend and a professional **Next.js 15** frontend (App Router) styled with **Tailwind CSS v4**.
+- **Built-in Security:** Stateless JWT authentication or stateful Session-based logins with pre-wired frontend auth hooks.
 - **Enterprise Architecture:** Compile-time safe mapping with **MapStruct**, auto-configured `Page<T>` pagination, and JPA `Specification` dynamic filtering out of the box.
 - **Database Migrations:** First-class **Flyway** support. Automatically scaffold migration directories and generate `.sql` migrations per entity.
 - **Role-Based Access Control & Auditing:** Pre-configured `ROLE_ADMIN` and `ROLE_USER` entities with JPA Auditing (`@CreatedBy`, `@LastModifiedDate`).

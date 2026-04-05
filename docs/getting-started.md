@@ -10,7 +10,7 @@ nav_order: 2
 
 Before using Sprygen, ensure you have the following installed on your system:
 
-- **Node.js** (v16 or newer)
+- **Node.js** (v20 or newer recommended for Next.js 15)
 - **Java Development Kit (JDK)** 17 or 21
 - **Maven** or **Gradle** (matching your preferred build tool)
 
@@ -24,29 +24,36 @@ npm install -g sprygen
 
 *(If you are developing Sprygen locally, clone the repository, run `npm install`, compile it using `npm run build`, and link it using `npm link`.)*
 
-## Verifying the Installation
-
-Open a terminal and run:
-
-```bash
-sprygen --version
-```
-
-If it prints the version number, you are good to go!
-
 ## Creating Your First Project
 
 The fastest way to get started is by scaffolding a new project:
 
 ```bash
-sprygen new my-spring-app
+sprygen new my-project
 ```
 
-Then answer the interactive prompts to define your stack. Once generation completes, you can navigate into your new project, build it from the terminal, and run it!
+Then answer the interactive prompts to define your stack. For a **Fullstack** experience, select "Fullstack (Next.js 15 + Spring Boot)".
 
+### Running a Fullstack Project
+
+If you generated a Fullstack project, you will have a monorepo structure. You'll need two terminals to run both parts:
+
+**Terminal 1: Backend**
 ```bash
-cd my-spring-app
+cd my-project/backend
 ./mvnw spring-boot:run
 ```
 
-You've successfully started a Sprygen-powered Spring Boot application!
+**Terminal 2: Frontend**
+```bash
+cd my-project/frontend
+npm install
+npm run dev
+```
+
+Your backend will be available at `http://localhost:8080` and your frontend at `http://localhost:3000`.
+
+## Next Steps
+
+- Explore [CLI Commands]({{ site.baseurl }}/commands) to add entities to your project.
+- Understand the [Architecture]({{ site.baseurl }}/architecture) behind your new application.

@@ -18,6 +18,7 @@ You will configure:
 - **Build Tool:** Maven or Gradle
 - **Database:** MySQL, PostgreSQL, or H2 (in-memory)
 - **Auth Strategy:** Stateless REST (JWT) or Stateful Web (Session)
+- **Project Type:** REST API (Backend Only) or **Fullstack (Next.js 15 Monorepo)**
 - **Modules:** Flyway Database Migrations, Swagger/OpenAPI, Spring Mail, Logback
 
 ## What Happens Under the Hood?
