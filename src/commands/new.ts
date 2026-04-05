@@ -68,11 +68,11 @@ export async function newCommand(projectName: string): Promise<void> {
       message: 'Authentication method:',
       choices: [
         {
-          name: 'JWT       — stateless, token-based, ideal for REST + SPA  (recommended)',
+          name: 'JWT       \u2014 stateless, token-based, ideal for REST + SPA  (recommended)',
           value: 'jwt',
         },
         {
-          name: 'Session   — Spring form-login, stateful, ideal for Thymeleaf apps',
+          name: 'Session   \u2014 Spring form-login, stateful, ideal for Thymeleaf apps',
           value: 'session',
         },
       ],
@@ -84,17 +84,56 @@ export async function newCommand(projectName: string): Promise<void> {
       message: 'Project type:',
       choices: [
         {
-          name: 'REST API  — JSON responses only, no frontend',
+          name: 'REST API  \u2014 JSON responses only, no frontend',
           value: 'api',
         },
         {
-          name: 'Fullstack — REST API + frontend (dashboard, profiles, admin panel)',
+          name: 'Fullstack \u2014 REST API + frontend (dashboard, profiles, admin panel)',
           value: 'fullstack',
         },
       ],
       default: 'api',
     },
   ]);
+
+  // ── Frontend template (only when fullstack) ───────────────────────────────
+  let frontendTemplate: 'none' | 'nextjs' = 'none';
+  let backendUrl = 'http://localhost:8080';
+
+  if (authAnswers.projectType === 'fullstack') {
+    printSection('Frontend Template');
+
+    const frontendAnswers = await inquirer.prompt([
+      {
+        type: 'list',
+        name: 'frontendTemplate',
+        message: 'Frontend framework:',
+        choices: [
+          {
+            name: 'Next.js   \u2014 App Router + Tailwind + pre-wired API client & auth hooks  (recommended)',
+            value: 'nextjs',
+          },
+          {
+            name: 'Static HTML \u2014 plain HTML/JS served by Spring Boot (classic)',
+            value: 'none',
+          },
+        ],
+        default: 'nextjs',
+      },
+      {
+        type: 'input',
+        name: 'backendUrl',
+        message: 'Backend base URL (used in frontend .env):',
+        default: 'http://localhost:8080',
+        when: (answers: Record<string, unknown>) => answers.frontendTemplate === 'nextjs',
+      },
+    ]);
+
+    frontendTemplate = frontendAnswers.frontendTemplate as 'none' | 'nextjs';
+    if (frontendAnswers.backendUrl) {
+      backendUrl = frontendAnswers.backendUrl as string;
+    }
+  }
 
   printSection('Select Modules');
 
@@ -125,6 +164,8 @@ export async function newCommand(projectName: string): Promise<void> {
     authStrategy: authAnswers.authStrategy,
     projectType: authAnswers.projectType,
     flyway: modulesAnswer.modules.includes('Flyway'),
+    frontendTemplate,
+    backendUrl,
   };
 
   const generator = new ProjectGenerator();

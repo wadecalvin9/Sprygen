@@ -11,6 +11,10 @@ export interface ProjectOptions {
   authStrategy: 'jwt' | 'session';
   projectType: 'api' | 'fullstack';
   flyway: boolean;
+  /** Frontend template to scaffold alongside the Spring Boot backend */
+  frontendTemplate: 'none' | 'nextjs';
+  /** Backend base URL injected into the frontend .env (e.g. http://localhost:8080) */
+  backendUrl: string;
 }
 
 export interface EntityOptions {

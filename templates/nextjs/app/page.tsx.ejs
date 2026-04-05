@@ -1,0 +1,156 @@
+'use client';
+
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
+import { Rocket, Box, Database, Shield, Cloud, ArrowRight } from 'lucide-react';
+
+export default function Home() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  return (
+    <div className="relative min-h-screen bg-background overflow-hidden flex flex-col">
+      {/* Abstract Background Elements */}
+      <div className="absolute inset-0 z-0 flex items-center justify-center opacity-50 dark:opacity-20 pointer-events-none">
+        <svg
+          viewBox="0 0 1024 1024"
+          className="absolute left-1/2 top-1/2 -z-10 h-[64rem] w-[64rem] -translate-x-1/2 [mask-image:radial-gradient(closest-side,white,transparent)]"
+          aria-hidden="true"
+        >
+          <circle
+            cx="512"
+            cy="512"
+            r="512"
+            fill="url(#gradient-wave)"
+            fillOpacity="0.7"
+          />
+          <defs>
+            <radialGradient id="gradient-wave">
+              <stop stopColor="hsl(var(--primary))" />
+              <stop offset="1" stopColor="hsl(var(--primary))" stopOpacity="0" />
+            </radialGradient>
+          </defs>
+        </svg>
+      </div>
+
+      <div className="glow-shape-1"></div>
+      <div className="glow-shape-2"></div>
+
+      {/* Navbar Container */}
+      <nav className="relative z-10 max-w-7xl w-full mx-auto px-6 h-20 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Rocket className="text-primary h-6 w-6" />
+          <span className="text-foreground font-bold text-xl tracking-tight"><%= projectName %></span>
+        </div>
+        <div className="flex items-center gap-6">
+          {!loading && user ? (
+            <Link
+              href="/dashboard"
+              className="text-primary hover:text-emerald-500 font-semibold transition-colors flex items-center gap-1"
+            >
+              Dashboard <ArrowRight className="w-4 h-4" />
+            </Link>
+          ) : (
+            <>
+              <Link href="/login" className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors">
+                Login
+              </Link>
+              <Link
+                href="/register"
+                className="bg-primary hover:bg-emerald-500 text-primary-foreground text-sm font-medium px-5 py-2 rounded-lg transition-colors shadow-lg shadow-emerald-500/20"
+              >
+                Get Started
+              </Link>
+            </>
+          )}
+        </div>
+      </nav>
+
+      {/* Hero Section */}
+      <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 text-center">
+        <div className="max-w-3xl mx-auto flex flex-col items-center">
+          {/* Powered By Badge */}
+          <div className="inline-flex items-center gap-2 bg-primary/10 border border-primary/20 text-primary text-xs font-semibold px-4 py-1.5 rounded-full mb-8 tracking-wide uppercase">
+            <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
+            Powered by Sprygen
+          </div>
+
+          {/* Headline */}
+          <h1 className="text-5xl sm:text-[4rem] font-extrabold tracking-tight mb-6 text-foreground leading-[1.1]">
+            Welcome to<br />
+            <span className="text-primary"><%= projectName %></span>
+          </h1>
+
+          {/* Description */}
+          <p className="text-muted-foreground text-lg sm:text-xl max-w-2xl mx-auto mb-10 leading-relaxed font-light">
+            A fullstack application built with <strong className="text-foreground font-semibold">Next.js 14</strong> and <strong className="text-foreground font-semibold">Spring Boot</strong>. JWT authentication, typed API hooks, and a pre-wired backend — ready to ship.
+          </p>
+
+          {/* CTA Buttons */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full sm:w-auto h-16">
+            {loading ? (
+              <span className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></span>
+            ) : user ? (
+              <button
+                onClick={() => router.push('/dashboard')}
+                className="w-full sm:w-auto bg-primary hover:bg-emerald-500 text-primary-foreground font-semibold px-8 py-3.5 rounded-xl transition-all duration-200 shadow-[0_0_20px_rgba(52,211,153,0.3)] hover:shadow-[0_0_30px_rgba(52,211,153,0.5)] hover:-translate-y-0.5 flex items-center justify-center gap-2"
+              >
+                Go to Dashboard <ArrowRight className="w-5 h-5" />
+              </button>
+            ) : (
+              <>
+                <Link
+                  href="/register"
+                  className="w-full sm:w-auto bg-primary hover:bg-emerald-500 text-primary-foreground font-semibold px-8 py-3.5 rounded-xl transition-all duration-200 shadow-[0_0_20px_rgba(52,211,153,0.3)] hover:shadow-[0_0_30px_rgba(52,211,153,0.5)] hover:-translate-y-0.5"
+                >
+                  Get Started
+                </Link>
+                <Link
+                  href="/login"
+                  className="w-full sm:w-auto bg-transparent hover:bg-accent border border-border text-foreground font-semibold px-8 py-3.5 rounded-xl transition-all duration-200 hover:-translate-y-0.5"
+                >
+                  Sign In
+                </Link>
+              </>
+            )}
+          </div>
+        </div>
+      </main>
+
+      {/* Footer Tech Stack Badge */}
+      <footer className="relative z-10 pb-8 flex justify-center">
+        <div className="flex items-center gap-6 bg-card border border-border/50 rounded-2xl px-6 py-4 shadow-xl backdrop-blur-md">
+          <div className="flex items-center gap-2 border-r border-border pr-6">
+            <Box className="w-5 h-5 text-muted-foreground" />
+            <span className="text-sm font-semibold text-foreground">Powered By & Tech Stack</span>
+          </div>
+          
+          <div className="flex items-center gap-6 hidden sm:flex">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-full bg-foreground flex items-center justify-center">
+                <span className="text-background text-[10px] font-bold">N</span>
+              </div>
+              <span className="text-sm text-muted-foreground font-medium">Next.js</span>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Database className="w-5 h-5 text-primary" />
+              <span className="text-sm text-muted-foreground font-medium">Spring Boot</span>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Shield className="w-5 h-5 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground font-medium">JWT Auth</span>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Cloud className="w-5 h-5 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground font-medium">API Ready</span>
+            </div>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}

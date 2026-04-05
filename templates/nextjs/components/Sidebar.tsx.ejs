@@ -1,0 +1,130 @@
+'use client';
+
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { Rocket, LayoutDashboard, Users, ShieldAlert, Activity, BarChart, Settings, LogOut, Sun, Moon } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { useTheme } from 'next-themes';
+import { useState, useEffect } from 'react';
+
+const MENU_ITEMS = [
+  { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'Users', href: '/dashboard/users', icon: Users },
+];
+
+export default function Sidebar() {
+  const pathname = usePathname();
+  const { logout, user } = useAuth();
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  return (
+    <aside className="w-64 border-r border-border bg-card flex flex-col hidden sm:flex h-screen sticky top-0">
+      {/* Brand */}
+      <div className="h-20 flex items-center px-6 border-b border-border/50">
+        <Link href="/" className="flex items-center gap-2 group">
+          <Rocket className="w-6 h-6 text-primary group-hover:-translate-y-1 transition-transform" />
+          <span className="text-xl font-bold tracking-tight text-foreground"><%= projectName %></span>
+        </Link>
+      </div>
+
+      {/* Nav links */}
+      <div className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
+        {/* Internal Navigation */}
+        <div className="mb-6">
+          <p className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Application</p>
+          {MENU_ITEMS.map((item) => {
+            const Icon = item.icon;
+            const isActive = pathname === item.href;
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  isActive 
+                    ? 'bg-primary text-primary-foreground shadow-sm shadow-emerald-500/20' 
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                {item.name}
+              </Link>
+            );
+          })}
+        </div>
+        
+        {/* External Resources */}
+        <div>
+          <p className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Resources</p>
+          
+          {/* Docs */}
+          <a
+            href="https://wadecalvin9.github.io/Sprygen/"
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors text-muted-foreground hover:bg-muted hover:text-foreground group"
+          >
+            <div className="flex items-center gap-3">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+              Official Docs
+            </div>
+          </a>
+
+          {/* Swagger UI (Admin Only) */}
+          {user?.roles?.includes('ROLE_ADMIN') && (
+            <a
+              href="http://localhost:8080/swagger-ui/index.html"
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors text-emerald-500 hover:bg-emerald-500/10 group mt-1"
+            >
+              <div className="flex items-center gap-3">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>
+                Swagger API
+              </div>
+            </a>
+          )}
+        </div>
+      </div>
+
+      {/* User & Theme Toggle area */}
+      <div className="p-4 border-t border-border/50 space-y-3">
+        {/* User Card */}
+        <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-muted text-sm font-medium text-foreground">
+          <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground">
+            {user?.firstName?.[0] || user?.email?.[0]?.toUpperCase() || 'U'}
+          </div>
+          <div className="flex flex-col overflow-hidden">
+            <span className="truncate">{user?.firstName} {user?.lastName}</span>
+            <span className="text-[10px] text-muted-foreground truncate">{user?.email}</span>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center justify-between px-1">
+          {mounted && (
+            <button
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full transition-colors"
+              title="Toggle Theme"
+            >
+              {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
+          )}
+
+          <button
+            onClick={() => logout()}
+            className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full transition-colors flex items-center gap-2"
+            title="Log out"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    </aside>
+  );
+}

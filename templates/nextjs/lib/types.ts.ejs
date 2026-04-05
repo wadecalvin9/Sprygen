@@ -1,0 +1,42 @@
+// ── Shared DTOs mirroring the Spring Boot backend for <%= projectName %> ──────
+
+export interface AuthRequest {
+  email: string;
+  password: string;
+}
+
+export interface RegisterRequest {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+}
+
+export interface UserDto {
+  id: number;
+  email: string;
+  firstName: string;
+  lastName: string;
+  roles: string[];
+  createdAt: string;
+}
+
+export interface ProfileUpdateRequest {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+}
+
+export interface ApiError {
+  status: number;
+  message: string;
+  errors?: Record<string, string>;
+}

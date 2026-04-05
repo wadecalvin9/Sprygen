@@ -1,0 +1,46 @@
+'use client';
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
+
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+  requiredRole?: string;
+}
+
+/**
+ * Wraps any page or component that requires authentication.
+ * Redirects to /login if the user is not authenticated.
+ * Optionally checks for a required role.
+ */
+export default function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
+  const { isAuthenticated, isLoading, hasRole } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isLoading) {
+      if (!isAuthenticated) {
+        router.push('/login');
+      } else if (requiredRole && !hasRole(requiredRole)) {
+        router.push('/dashboard');
+      }
+    }
+  }, [isAuthenticated, isLoading, requiredRole, hasRole, router]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-gray-400 text-sm">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) return null;
+  if (requiredRole && !hasRole(requiredRole)) return null;
+
+  return <>{children}</>;
+}

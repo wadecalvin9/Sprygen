@@ -5,6 +5,7 @@ import axios from 'axios';
 import AdmZip from 'adm-zip';
 import { ProjectOptions } from '../types';
 import { logger } from '../utils/logger';
+import { NextJsGenerator } from './NextJsGenerator';
 
 export class ProjectGenerator {
   private templatesDir: string;
@@ -24,12 +25,20 @@ export class ProjectGenerator {
   }
 
   async generate(options: ProjectOptions): Promise<void> {
-    const outputDir = path.resolve(process.cwd(), options.projectName);
+    const isNextJs    = options.frontendTemplate === 'nextjs';
+    // When Next.js is selected, Spring Boot lives in backend/ inside the project root
+    const projectRoot = path.resolve(process.cwd(), options.projectName);
+    const outputDir   = isNextJs ? path.join(projectRoot, 'backend') : projectRoot;
 
-    if (await fs.pathExists(outputDir)) {
+    // Pre-check: root project dir must not exist
+    if (await fs.pathExists(projectRoot)) {
       throw new Error(
         `Directory "${options.projectName}" already exists. Please choose a different project name or remove the existing directory.`
       );
+    }
+
+    if (isNextJs) {
+      await fs.ensureDir(projectRoot);
     }
 
     const artifactId = options.projectName.toLowerCase().replace(/[^a-z0-9-]/g, '-');
@@ -37,10 +46,10 @@ export class ProjectGenerator {
 
     logger.title(`Generating Spring Boot project: ${options.projectName}`);
 
-    const spinner = ora({ text: 'Downloading from Spring Initializr…', color: 'cyan' }).start();
+    const spinner = ora({ text: 'Downloading from Spring Initializr...', color: 'cyan' }).start();
 
     try {
-      // ── Step 1: Download from Spring Initializr ──────────────
+      // -- Step 1: Download from Spring Initializr --
       let dependencies = 'data-jpa,security,validation,lombok';
       dependencies += ',web';                      // always include web
 
@@ -49,16 +58,17 @@ export class ProjectGenerator {
       if (options.database === 'h2')         dependencies += ',h2';
       if (options.modules.includes('Mail'))  dependencies += ',mail';
 
-      // Thymeleaf only added for session + fullstack
+      // Thymeleaf only added for session + fullstack (non-nextjs)
       const needsThymeleaf =
-        options.authStrategy === 'session' && options.projectType === 'fullstack';
+        options.authStrategy === 'session' && options.projectType === 'fullstack' && !isNextJs;
       if (needsThymeleaf) dependencies += ',thymeleaf';
 
       const type = options.buildTool === 'maven' ? 'maven-project' : 'gradle-project';
       const url  = new URL('https://start.spring.io/starter.zip');
       url.searchParams.append('type',        type);
       url.searchParams.append('language',    'java');
-      url.searchParams.append('baseDir',     options.projectName);
+      // When nextjs: baseDir='backend' so zip extracts to projectRoot/backend/
+      url.searchParams.append('baseDir',     isNextJs ? 'backend' : options.projectName);
       url.searchParams.append('groupId',     groupId);
       url.searchParams.append('artifactId',  artifactId);
       url.searchParams.append('name',        options.projectName);
@@ -74,19 +84,26 @@ export class ProjectGenerator {
         responseType: 'arraybuffer',
       });
 
-      spinner.text = 'Extracting project scaffold…';
+      spinner.text = 'Extracting project scaffold...';
       const tmpZipPath = path.resolve(process.cwd(), `${options.projectName}-tmp.zip`);
       await fs.writeFile(tmpZipPath, response.data);
       const zip = new AdmZip(tmpZipPath);
-      zip.extractAllTo(process.cwd(), true);
+
+      if (isNextJs) {
+        // Zip contains 'backend/' folder; extract into projectRoot/
+        zip.extractAllTo(projectRoot, true);
+      } else {
+        // Zip contains '<projectName>/' folder; extract into cwd
+        zip.extractAllTo(process.cwd(), true);
+      }
       await fs.unlink(tmpZipPath);
 
-      // ── Step 2: Patch pom.xml / build.gradle ─────────────────
-      spinner.text = 'Patching dependencies…';
+      // -- Step 2: Patch pom.xml / build.gradle --
+      spinner.text = 'Patching dependencies...';
       await this.patchDependencies(outputDir, options, needsThymeleaf);
 
-      // ── Step 3: Build template context ───────────────────────
-      spinner.text = 'Writing source files…';
+      // -- Step 3: Build template context --
+      spinner.text = 'Writing source files...';
       const context = this.buildContext(options, outputDir, artifactId, groupId);
 
       const javaBase      = path.join(outputDir, 'src/main/java', options.packagePath);
@@ -99,19 +116,27 @@ export class ProjectGenerator {
       const propsFile = path.join(resourcesBase, 'application.properties');
       if (await fs.pathExists(propsFile)) await fs.unlink(propsFile);
 
-      // ── Step 4: Generate Java sources ────────────────────────
+      // -- Step 4: Generate Java sources --
       await this.generateJavaSources(javaBase, context, options);
 
-      // ── Step 5: Generate resources ────────────────────────────
+      // -- Step 5: Generate resources --
       await this.generateResources(resourcesBase, context, options);
 
-      // ── Step 6: Generate frontend ────────────────────────────
+      // -- Step 6: Generate frontend --
       if (options.projectType === 'fullstack') {
-        spinner.text = 'Writing frontend files…';
-        await this.generateFrontend(outputDir, context, options, needsThymeleaf);
+        if (isNextJs) {
+          spinner.succeed('Spring Boot backend ready!');
+          // NextJsGenerator has its own spinner
+          const nextGen = new NextJsGenerator();
+          await nextGen.generate(options, outputDir);
+        } else {
+          spinner.text = 'Writing frontend files...';
+          await this.generateFrontend(outputDir, context, options, needsThymeleaf);
+          spinner.succeed(`Project "${options.projectName}" scaffolded successfully!`);
+        }
+      } else {
+        spinner.succeed(`Project "${options.projectName}" scaffolded successfully!`);
       }
-
-      spinner.succeed(`Project "${options.projectName}" scaffolded successfully!`);
     } catch (err) {
       spinner.fail('Project generation failed.');
       throw err;
@@ -265,6 +290,11 @@ export class ProjectGenerator {
     const dbDependencies = this.getDbDependencies(options.database);
     const dbConfig       = this.getDbConfig(options.database, artifactId);
 
+    // When Next.js is chosen, CORS must allow localhost:3000
+    const corsOrigins = options.frontendTemplate === 'nextjs'
+      ? ['http://localhost:3000', options.backendUrl]
+      : ['http://localhost:3000', 'http://localhost:5173'];
+
     return {
       projectName:       options.projectName,
       projectNamePascal: mainClassName.replace('Application', ''),
@@ -285,6 +315,9 @@ export class ProjectGenerator {
       isSessionAuth:     options.authStrategy === 'session',
       isFullstack:       options.projectType  === 'fullstack',
       isApiOnly:         options.projectType  === 'api',
+      isNextJs:          options.frontendTemplate === 'nextjs',
+      backendUrl:        options.backendUrl,
+      corsOrigins,
       dbDependency:      dbDependencies.dependency,
       dbDriverClass:     dbDependencies.driverClass,
       dbConfig,
@@ -304,7 +337,7 @@ export class ProjectGenerator {
     const tDir = path.join(this.templatesDir, 'java');
     const ctx  = context as Record<string, unknown>;
 
-    // ── Always-generated files ───
+    // Always-generated files
     const files: Array<[string, string]> = [
       ['entity/AbstractAuditingEntity.java','entity/AbstractAuditingEntity.java.ejs'],
       ['config/AuditingConfig.java',        'config/AuditingConfig.java.ejs'],
@@ -325,7 +358,7 @@ export class ProjectGenerator {
       ['dto/UserDto.java',                  'dto/UserDto.java.ejs'],
     ];
 
-    // ── JWT-only files ───
+    // JWT-only files
     if (options.authStrategy === 'jwt') {
       files.push(
         ['service/JwtService.java',               'service/JwtService.java.ejs'],
@@ -341,7 +374,7 @@ export class ProjectGenerator {
       );
     }
 
-    // ── Swagger ───
+    // Swagger
     if (options.modules.includes('Swagger')) {
       files.push(['config/SwaggerConfig.java', 'config/SwaggerConfig.java.ejs']);
     }
@@ -406,7 +439,7 @@ export class ProjectGenerator {
     const ctx = context as Record<string, unknown>;
 
     if (isThymeleaf) {
-      // ── Session + Thymeleaf ─────────────────────────────────
+      // Session + Thymeleaf
       const tDir      = path.join(this.templatesDir, 'thymeleaf');
       const targetDir = path.join(outputDir, 'src/main/resources/templates');
       await fs.ensureDir(targetDir);
@@ -423,7 +456,7 @@ export class ProjectGenerator {
         await writeGeneratedFile(path.join(targetDir, out), path.join(tDir, tpl), ctx);
       }
 
-      // CSS → static/css/
+      // CSS to static/css/
       const cssDir = path.join(outputDir, 'src/main/resources/static/css');
       await fs.ensureDir(cssDir);
       await fs.copyFile(
@@ -431,7 +464,7 @@ export class ProjectGenerator {
         path.join(cssDir, 'style.css'),
       );
     } else {
-      // ── JWT + Static multi-page ─────────────────────────────
+      // JWT + Static multi-page
       const tDir      = path.join(this.templatesDir, 'static');
       const targetDir = path.join(outputDir, 'src/main/resources/static');
 
@@ -454,7 +487,7 @@ export class ProjectGenerator {
         }
       }
 
-      // JS — nav.js rendered (has projectName), auth.js and ui.js are plain copies
+      // JS: nav.js rendered, auth.js and ui.js plain copies
       await writeGeneratedFile(
         path.join(targetDir, 'js/nav.js'),
         path.join(tDir, 'js/nav.js.ejs'),
@@ -469,7 +502,7 @@ export class ProjectGenerator {
         path.join(targetDir, 'js/ui.js'),
       );
 
-      // CSS — plain copy
+      // CSS: plain copy
       await fs.copyFile(
         path.join(tDir, 'css/style.css'),
         path.join(targetDir, 'css/style.css'),
@@ -516,28 +549,48 @@ export class ProjectGenerator {
   }
 
   private printSuccessMessage(options: ProjectOptions): void {
-    const isJwt      = options.authStrategy === 'jwt';
+    const isJwt       = options.authStrategy === 'jwt';
     const isFullstack = options.projectType === 'fullstack';
-    const runCmd     = options.buildTool === 'maven' ? './mvnw spring-boot:run' : './gradlew bootRun';
+    const isNextJs    = options.frontendTemplate === 'nextjs';
+    const runCmd      = options.buildTool === 'maven' ? './mvnw spring-boot:run' : './gradlew bootRun';
 
     console.log();
     logger.success(`Project "${options.projectName}" is ready!\n`);
     console.log(`  Next steps:\n`);
-    console.log(`    cd ${options.projectName}`);
-    console.log(`    ${runCmd}`);
-    console.log();
-    console.log(`  Endpoints:`);
-    console.log(`    Home          http://localhost:8080/`);
-    if (isFullstack) {
-      console.log(`    Dashboard     http://localhost:8080/${isJwt ? '' : 'dashboard'}`);
+
+    if (isNextJs) {
+      console.log(`    cd ${options.projectName}`);
+      console.log(`    make dev              ->  starts backend + frontend together`);
+      console.log();
+      console.log(`    -- or separately --`);
+      console.log(`    cd backend && ${runCmd}`);
+      console.log(`    cd frontend && npm run dev`);
+      console.log();
+      console.log(`  URLs:`);
+      console.log(`    Frontend        http://localhost:3000`);
+      console.log(`    Backend API     http://localhost:8080`);
+      if (options.modules.includes('Swagger')) {
+        console.log(`    API Docs        http://localhost:8080/swagger-ui/index.html`);
+      }
+      console.log(`    Health          http://localhost:8080/actuator/health`);
+    } else {
+      console.log(`    cd ${options.projectName}`);
+      console.log(`    ${runCmd}`);
+      console.log();
+      console.log(`  Endpoints:`);
+      console.log(`    Home            http://localhost:8080/`);
+      if (isFullstack) {
+        console.log(`    Dashboard       http://localhost:8080/${isJwt ? '' : 'dashboard'}`);
+      }
+      if (options.modules.includes('Swagger')) {
+        console.log(`    API Docs        http://localhost:8080/swagger-ui/index.html`);
+      }
+      console.log(`    Health          http://localhost:8080/actuator/health`);
     }
-    if (options.modules.includes('Swagger')) {
-      console.log(`    API Docs      http://localhost:8080/swagger-ui/index.html`);
-    }
-    console.log(`    Health        http://localhost:8080/actuator/health`);
+
     console.log();
     console.log(`  Auth strategy:  ${isJwt ? 'JWT (stateless)' : 'Session (form-login)'}`);
-    console.log(`  Project type:   ${isFullstack ? 'Fullstack' : 'REST API only'}`);
+    console.log(`  Frontend:       ${isNextJs ? 'Next.js 14 (App Router + Tailwind)' : isFullstack ? 'Static HTML' : 'None'}`);
     console.log();
   }
 }
